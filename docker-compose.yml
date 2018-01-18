@@ -1,0 +1,16 @@
+# Example docker-compose.yml file
+version: '2'
+services:
+  notebooks:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # env_file: .env
+    ports:
+      - "8888:8888"
+      - "6006:6006"
+    volumes:
+    - .:/src/Plasticity_Ker/
+    # - .:/notebooks
+    - ./archive:/tensorboard
+    # - /volumes/lab/shuang_data:/data

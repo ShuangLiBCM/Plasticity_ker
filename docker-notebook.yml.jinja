@@ -15,7 +15,7 @@ services:
       - "500{{i}}:6006"
     volumes:
       - .:/src/Plasticity_Ker
-      - .:/notebooks
+      # - .:/notebooks
       - ./archive:/tensorboard
       - /mnt/lab/shuang_data:/data
   {% endfor %}

@@ -1,6 +1,10 @@
-FROM eywalker/tensorflow-jupyter:v1.0.1-cuda8.0-cudnn5
+FROM eywalker/tensorflow-jupyter:v0.11.0rc0
 
 RUN pip3 install seaborn
+RUN pip3 install sklearn
+RUN pip3 install scipy
+RUN apt-get update
+RUN apt-get install -y git
 RUN pip3 install git+https://github.com/datajoint/datajoint-python.git
 
 WORKDIR /src
