@@ -1,0 +1,12 @@
+FROM eywalker/tensorflow-jupyter:v1.0.1-cuda8.0-cudnn5
+
+RUN pip3 install seaborn
+RUN pip3 install git+https://github.com/datajoint/datajoint-python.git
+
+WORKDIR /src
+RUN git clone https://github.com/atlab/atflow.git &&\
+    pip3 install /src/atflow
+
+ADD . /src/learning_plasticity
+RUN pip3 install -e /src/learning_plasticity
+

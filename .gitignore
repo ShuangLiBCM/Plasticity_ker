@@ -1,0 +1,16 @@
+.ipynb_checkpoints/
+*~
+~*
+Untitiled*.ipynb
+*.py[co]
+nvidia-docker-compose.yml
+.npz
+.npy
+.pdf
+.png
+.jpeg
+.idea/
+data/
+.env
+archive/
+*.pdf

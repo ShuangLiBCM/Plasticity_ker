@@ -1,0 +1,16 @@
+version: '2'
+# this runs the training scripts on all GPUs
+services:
+  # Add as many runners for scripts as GPUs
+  {% for i in range(N_GPU) %}
+  runner{{i}}:
+    build:
+      context: .
+      dockerfile: Dockerfile_runner
+    devices:
+      - /dev/nvidia{{i}}
+    env_file: .env
+    volumes:
+      - .:/src/learning_plasticity
+      - /mnt/lab/shuang_data:/data
+  {% endfor %}
