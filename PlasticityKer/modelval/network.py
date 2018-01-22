@@ -1,51 +1,43 @@
 """
-    Create network classes
+    Define noise
 """
 import tensorflow as tf
 
-class Network(object):
+class BaseNet(object):
 
-    def __init__(self, kernel=[]):   # If ground truth kernel is given ,it will be used.
+    def __init__(self):
         self.graph = tf.Graph()
-        self.kernel = kernel
+        self.build()
 
-    def build(self, input_u, output_u):
+    def build(self, input_u=10, output_u=1):
+        """
+        Simple 1 layer fully connected network to test the training module
+        :param input_u: number of input neuron
+        :param output_u: number of output neuron
+        :return:
+        """
 
-        with tf.variable_scope("Network", reuse=True):
+        with self.graph.as_default():
+
             self.w = tf.get_variable(name='weights', shape=[input_u, output_u], dtype=tf.float32)
-            self.b = tf.get_variable(name='bias', dtype=tf.float32, initializer=tf.zeros([1, output_u]))
+            self.b = tf.get_variable(name='bias', dtype=tf.float32, initializer=tf.zeros(shape=[1, output_u]))
             self.X = tf.placeholder(dtype=tf.float32, shape=(None, input_u), name='X')
+            self.y = tf.placeholder(dtype=tf.float32, shape=(None, output_u), name='y')
+            self.predict = tf.add(tf.matmul(self.X, self.w), self.b)
 
-            self.predict = tf.matmul(self.X, self.w) + self.b
+            self.loss = tf.reduce_sum(tf.square(self.predict - self.y))
 
-        return self.predict
+            self.lr = tf.placeholder(tf.float32, name='learning_rate')
 
-    def loss(self, target):
-        """
-            Deal with generating the prediction
-        """
-        self.target = target
+            self.loss_summary = tf.summary.scalar("loss", self.loss)
+
+class PairNet(object):
+    """Build the architecture of pair based network"""
+
+    def __init__(self):
         pass
 
-    def train(self):
-        """
-            Deal with the training.
-        """
-        pass
-
-    def batch(self):
-        """
-            Deal with the data.
-        """
-        pass
-
-
-class PairNet(Network):
-
-    def __init__(self, kernel=[]):
-        super(Network, self).__init__(kernel=[])
-
-    def build(self, w_pre, w_post, b_pre, b_post):
+    def build(self):
         """
         Build the architecture of the network
         :return:
@@ -58,12 +50,12 @@ class PairNet(Network):
         pass
 
 
-class TripNet(Network):
+class TripNet(object):
 
-    def __init__(self, kernel=[]):
-        super(Network, self).__init__(kernel=[])
+    def __init__(self):
+        pass
 
-    def build(self, w_pre, w_post, b_pre, b_post):
+    def build(self):
         """
         Build the architecture of the network
         :return:
