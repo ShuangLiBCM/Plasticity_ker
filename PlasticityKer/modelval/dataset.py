@@ -2,8 +2,7 @@
     Define the dataset class
 """
 import numpy as np
-import tensorflow as tf
-from tensorflow.python.util import nest
+
 
 class Dataset(object):
 

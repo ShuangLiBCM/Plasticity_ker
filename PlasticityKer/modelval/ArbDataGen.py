@@ -2,9 +2,9 @@
     Functions for generating spike train from pairing ptl
 """
 import numpy as np
-import pdb
+from modelval import pairptl, network, trainer
 
-def arb_spk_gen(ptl, spk_reso, if_noise=0):
+def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=0):
     """
     Generate a single set of pre-spike, post-spike trains and target given the ptl
     -------------------------------
@@ -25,10 +25,10 @@ def arb_spk_gen(ptl, spk_reso, if_noise=0):
     train_len = int(ptl.ptl_occ / ptl.ptl_freq)
 
     # Define length of the spike train
-    spk_len = train_len//spk_reso * 1000     # spk_reso is in msec
+    if spk_len is None:
+        spk_len = train_len//spk_reso * 1000     # spk_reso is in msec
 
-    pre_spk = np.zeros(spk_len)
-    post_spk = np.zeros(spk_len)
+    spk_pair = np.zeros((spk_len,2))
 
     rep_interval = int(np.floor(1000 / ptl.ptl_freq / spk_reso))
     rep_num = int(np.floor(train_len * ptl.ptl_freq))
@@ -144,21 +144,54 @@ def arb_spk_gen(ptl, spk_reso, if_noise=0):
 
     spk_time_pre[np.where(spk_time_pre > spk_len)] = spk_len - 1  # Prevent spike outsize protocol
     spk_time_post[np.where(spk_time_post > spk_len)] = spk_len - 1  # Prevent spike outsize protocol
-    pre_spk[spk_time_pre] = 1
-    post_spk[spk_time_post] = 1
+    spk_pair[spk_time_pre, 0] = 1
+    spk_pair[spk_time_post, 1] = 1
 
-    return spk_time_pre, spk_time_post, pre_spk, post_spk
+    return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(pre_spk, post_spk, kernel, network):
+def arb_w_gen(df, ptl_list, kernel, spk_len=None, aug_times=10):
     """
-    Generate arbitrary target w with given spike trains, kernels and network
+    Generate arbitrary target w with given spike trains, kernel and network
     ------------------------------
-    :param pre_spk: binary array indicating pre-synaptic train
-    :param post_spk: binary array indicating post-synaptic train
-    :param kernel: kernel object
-    :param network: network object
+    :param df: data frame with protocol information
+    :param ptl_list: list of protocol indices
+    :param kernel: kernel object used to generate the toy data
+    :param spk_len: total length of spike train
+    :param aug_times: number of times to augment one protocol
     :return:
     """
+
+    spk_pairs = []
+
+    if spk_len is None:
+        spk_len = int(15 / 0.1 * 1000)   # The longest protocol
+
+    for i in range(len(ptl_list)):
+        data_ptl = df[df['ptl_idx'] == ptl_list[i]]
+
+        for j in range(len(data_ptl)):
+            ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
+            for _ in range(aug_times):
+                _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
+                spk_pairs.append(spk_pair)
+
+    # Generate the spike data
+    spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
+
+    # Get the network used to generate prediction
+    gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1], kernel_pre=kernel.bilat_ker,
+                              kernel_post=kernel.unilat_ker)
+
+    # Send the network graph into trainer, and name of placeholder
+    gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, input_name=gen_pairnet.inputs)
+
+    # generate targets through evaluating the prediction of the network
+    targets = gen_pairnet_train.evaluate(ops=gen_pairnet.prediction, inputs=spk_pairs)
+
+    return spk_pairs, targets
+
+
+
 
 

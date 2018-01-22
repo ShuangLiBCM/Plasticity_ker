@@ -7,11 +7,11 @@ from os.path import join
 
 class Trainer(object):
 
-    def __init__(self, loss, inputs, targets, session=None, save_dir=None, optimizer_op=tf.train.AdamOptimizer,
-                 optimizer_config=None):   # If ground truth kernel is given ,it will be used.
+    def __init__(self, loss, input_name, target_name=None, session=None, save_dir=None, optimizer_op=tf.train.AdamOptimizer,
+                 optimizer_config={}):   # If ground truth kernel is given ,it will be used.
         self.loss = loss
-        self.inputs_ = inputs
-        self.targets_ = targets
+        self.inputs_ = input_name
+        self.targets_ = target_name
         self.graph = loss.graph
         self.session = session
         self.optimizer_op = optimizer_op
@@ -62,7 +62,7 @@ class Trainer(object):
                 fd[ph] = val
 
         # feed in targets
-        if targets is not None:
+        if self.targets_ is not None and targets is not None:
             nest.assert_same_structure(self.targets_, targets)
             targets_ph_list = nest.flatten(self.targets_)
             targets_list = nest.flatten(targets)

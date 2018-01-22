@@ -14,3 +14,5 @@ data/
 .env
 archive/
 *.pdf
+*.index
+*.meta
