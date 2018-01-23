@@ -10,9 +10,9 @@ nvidia-docker-compose.yml
 .png
 .jpeg
 .idea/
-data/
 .env
 archive/
 *.pdf
 *.index
 *.meta
+model/
