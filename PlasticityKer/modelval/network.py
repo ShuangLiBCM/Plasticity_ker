@@ -71,14 +71,13 @@ class PairNet(object):
             self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
 
-            if self.ground_truth_init:  # Not in training model
-                self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre),
+            self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre),trainable=False,
                                                   name='const_pre_kernel')
+            if self.ground_truth_init:  # Not in training model
                 self.kernel_post = tf.get_variable(shape=self.kernel_post.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post),
                                                    name='const_post_kernel')
             else:
                 kernel_len = self.kernel.len_kernel
-                self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
                 self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
 
             self.bias = tf.Variable(0, dtype=tf.float32, name='bias')

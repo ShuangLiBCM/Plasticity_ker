@@ -180,8 +180,8 @@ def arb_w_gen(df, ptl_list, kernel, spk_len=None, aug_times=10):
     spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
 
     # Get the network used to generate prediction
-    gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1], kernel_pre=kernel.bilat_ker,
-                              kernel_post=kernel.unilat_ker)
+    gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1], kernel_pre=kernel.dot_ker,
+                              kernel_post=kernel.bilat_ker)
 
     # Send the network graph into trainer, and name of placeholder
     gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, input_name=gen_pairnet.inputs)
