@@ -39,7 +39,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, kernel_pre=None, kernel_post=None, ground_truth_init=1, reg_scale=[0.01, 0.01]):
+    def __init__(self, kernel=None, n_input=None, kernel_pre=None, kernel_post=None, ground_truth_init=1, reg_scale=[0, 0]):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -68,7 +68,7 @@ class PairNet(object):
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
             self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
-            self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1], name='target')
+            self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
 
             if self.ground_truth_init:  # Not in training model
@@ -86,7 +86,7 @@ class PairNet(object):
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
 
-            self.prediction = tf.matmul(a=self.y_pre, b=self.y_post, transpose_a=True) + self.bias
+            self.prediction = tf.reduce_sum(tf.multiply(self.y_pre, self.y_post), 1) + self.bias
 
             self.loss = tf.reduce_mean(tf.square(self.prediction - self.target))
 
@@ -113,13 +113,13 @@ class PairNet(object):
 
     def regularization(self):
 
-        l1_regularizer = tf.contrib.layers.l1_regularizer(scale=self.alpha_l1, scope=None)
+        l1_regularizer = tf.contrib.layers.l1_regularizer(scale=0.01, scope=None)
         l1_penalty = tf.contrib.layers.apply_regularization(l1_regularizer, [self.kernel_pre, self.kernel_post])
 
-        l2_regularizer = tf.contrib.layers.l2_regularizer(scale=self.alpha_l2, scope=None)
+        l2_regularizer = tf.contrib.layers.l2_regularizer(scale=0.01, scope=None)
         l2_penalty = tf.contrib.layers.apply_regularization(l2_regularizer, [self.kernel_pre, self.kernel_post])
 
-        return l1_penalty + l2_penalty
+        return self.alpha_l1 * l1_penalty + self.alpha_l2 * l2_penalty
 
 
 class TripNet(PairNet):
