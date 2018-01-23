@@ -76,7 +76,7 @@ class Trainer(object):
         return fd
 
     def train(self, train_data, vali_data, batch_size=256, save_model_freq=-1, vali_freq=200, min_error=-1, burn_in_steps=100,
-              early_stopping_steps=20, max_steps=10000, load_best=True, feed_dict=None):
+              early_stopping_steps=10, max_steps=10000, load_best=True, feed_dict=None):
         """
         Train the network until early stopping or maximum training number achieved.
         :param train_data: Input data used for training
