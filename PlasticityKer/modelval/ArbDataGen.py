@@ -165,7 +165,7 @@ def arb_w_gen(df, ptl_list, kernel, spk_len=None, aug_times=10):
     spk_pairs = []
 
     if spk_len is None:
-        spk_len = int(15 / 0.1 * 1000)   # The longest protocol
+        spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
 
     for i in range(len(ptl_list)):
         data_ptl = df[df['ptl_idx'] == ptl_list[i]]
