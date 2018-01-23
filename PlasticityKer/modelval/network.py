@@ -88,12 +88,12 @@ class PairNet(object):
 
             self.prediction = tf.matmul(a=self.y_pre, b=self.y_post, transpose_a=True) + self.bias
 
-            self.loss = tf.reduce_sum(tf.square(self.prediction - self.target))
+            self.loss = tf.reduce_mean(tf.square(self.prediction - self.target))
 
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.total = self.loss + self.regularization()
+            self.loss = self.loss + self.regularization()
 
     def conv_1d(self, data=None, kernel=None):
         """
