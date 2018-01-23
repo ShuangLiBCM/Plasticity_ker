@@ -4,10 +4,11 @@
 import tensorflow as tf
 from tensorflow.python.util import nest
 from os.path import join
+from os import path, makedirs
 
 class Trainer(object):
 
-    def __init__(self, loss, input_name, target_name=None, session=None, save_dir=None, save_name=None, optimizer_op=tf.train.AdamOptimizer,
+    def __init__(self, loss, input_name, target_name=None, session=None, save_dir=None, optimizer_op=tf.train.AdamOptimizer,
                  optimizer_config={}):   # If ground truth kernel is given ,it will be used.
         self.loss = loss
         self.inputs_ = input_name
@@ -18,7 +19,6 @@ class Trainer(object):
         self.optimizer_config = optimizer_config
         self.loss_tracker = []      # Used for tracking the loss
         self.save_dir = save_dir
-        self.save_name = save_name
         self.mini_vali_loss = None
         self.build()
         self.init_session()
@@ -92,6 +92,9 @@ class Trainer(object):
         :param feed_dict: External feed_dict for extra hyperparameter
         :return:
         """
+        if not path.exists(self.save_dir):
+            makedirs(self.save_dir)
+            
         with self.graph.as_default():
 
             burn_in_steps = burn_in_steps if burn_in_steps is not None else vali_freq * 4      # Prepare training steps before validation
@@ -108,6 +111,7 @@ class Trainer(object):
                 print('\nInitial validation cost=%.5f' % vali_loss, flush=True)
                 self.mini_vali_loss = vali_loss
                 self.save_best()
+                self.save(0)    # Save the initial model
 
             step = 1
 
@@ -175,14 +179,14 @@ class Trainer(object):
         """
         if step is None:
             step = self.session.run(self.global_step)
-        self.saver.save(self.session, join(self.save_dir, self.save_name, 'step'), global_step=step)
+        self.saver.save(self.session, join(self.save_dir, 'step'), global_step=step)
 
     def save_best(self):
         """
         Save the current state of the graph as best
         :return:
         """
-        self.saver_best.save(self.session, join(self.save_dir, self.save_name, 'best'))
+        self.saver_best.save(self.session, join(self.save_dir, 'best'))
 
     def restore_best(self):
 
@@ -190,4 +194,4 @@ class Trainer(object):
         Restore the last saved "best" state of the gragh.
         :return:
         """
-        self.saver_best.restore(self.session, join(self.save_dir, self.save_name, 'best'))
+        self.saver_best.restore(self.session, join(self.save_dir, 'best'))
