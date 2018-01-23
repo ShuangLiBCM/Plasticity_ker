@@ -39,7 +39,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, kernel_pre=None, kernel_post=None, reg_scale=[0.01, 0.01]):
+    def __init__(self, kernel=None, n_input=None, kernel_pre=None, kernel_post=None, ground_truth_init=1, reg_scale=[0.01, 0.01]):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -55,6 +55,7 @@ class PairNet(object):
         self.kernel_pre = kernel_pre
         self.kernel_post = kernel_post
         self.reg_scale = reg_scale
+        self.ground_truth_init = ground_truth_init
         self.build()
 
     def build(self):
@@ -67,15 +68,18 @@ class PairNet(object):
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
             self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
-            self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
+            self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1], name='target')
+            self.lr = tf.placeholder(tf.float32, name='learning_rate')
 
-            if (self.kernel_pre is not None) & (self.kernel_post is not None):  # Not in training model
-                self.kernel_pre = tf.constant(value=self.kernel_pre, dtype=tf.float32, name='const_pre_kernel')
-                self.kernel_post = tf.constant(value=self.kernel_post, dtype=tf.float32, name='const_pre_kernel')
+            if self.ground_truth_init:  # Not in training model
+                self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre),
+                                                  name='const_pre_kernel')
+                self.kernel_post = tf.get_variable(shape=self.kernel_post.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post),
+                                                   name='const_post_kernel')
             else:
                 kernel_len = self.kernel.len_kernel
-                self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, None], name='pre_kernel')
-                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, None], name='post_kernel')
+                self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
+                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
 
             self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
 
