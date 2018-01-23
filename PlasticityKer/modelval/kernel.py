@@ -25,6 +25,7 @@ class KernelGen(object):
         self.side = side
         self.bilat_ker = self.bi_exp_ker()
         self.unilat_ker = self.uni_exp_ker()
+        self.dot_ker = self.dot_ker()
 
     def bi_exp_ker(self):
         """
@@ -52,6 +53,17 @@ class KernelGen(object):
         else:
             left_x = self.x[mid_pt] - self.x[0:mid_pt]
             kernel[0:mid_pt] = np.exp(-1 * left_x / self.tau)
+        self.kernel = kernel.reshape(-1, 1)
+
+        return self.kernel
+
+    def dot_ker(self):
+        """
+            Implement kernel that preserves original data
+        """
+        kernel = np.zeros(self.len_kernel)
+        mid_pt = int((self.len_kernel - 1) / 2)
+        kernel[mid_pt] = 1
         self.kernel = kernel.reshape(-1, 1)
 
         return self.kernel

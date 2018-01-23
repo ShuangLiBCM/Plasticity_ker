@@ -122,19 +122,60 @@ class PairNet(object):
         return l1_penalty + l2_penalty
 
 
-class TripNet(object):
+class TripNet(PairNet):
 
-    def __init__(self):
-        pass
+    def __init__(self, kernel=None, n_input=None, kernel_pre=None, kernel_post=None, ground_truth_init=1, reg_scale=[0.01, 0.01]):
+        """
+        Create and build the PairNet
+        :param kernel: Kernel object
+        :param n_input: input dimension
+        :param kernel_pre: kernel used to convolve with pre-synaptic trains
+        :param kernel_post: kernel used to convolve with post-synaptic trains
+        :param reg_scale: l1, and l2 regularization strength
+        """
+
+        self.graph = tf.Graph()
+        self.kernel = kernel
+        self.n_input = n_input
+        self.kernel_pre = kernel_pre
+        self.kernel_post = kernel_post
+        self.reg_scale = reg_scale
+        self.ground_truth_init = ground_truth_init
+        self.build()
 
     def build(self):
         """
         Build the architecture of the network
+        :param: n_input, length of input
         :return:
-        # """
-        # self.w_pre = tf.get_variable(name='w_pre', shape=w_pre.shape, )
-        # self.w_post = tf.get_variable(name='w_pre', shape=w_pre.shape, )
-        # self.b = tf.get_variable()
-        # self.input = tf.placeholder()
-        # self.output = tf.placeholder()
-        pass
+        """
+        with self.graph.as_default():
+
+            self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
+            self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
+            self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1], name='target')
+            self.lr = tf.placeholder(tf.float32, name='learning_rate')
+
+            if self.ground_truth_init:  # Not in training model
+                self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre),
+                                                  name='const_pre_kernel')
+                self.kernel_post = tf.get_variable(shape=self.kernel_post.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post),
+                                                   name='const_post_kernel')
+            else:
+                kernel_len = self.kernel.len_kernel
+                self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
+                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
+
+            self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
+
+            self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
+            self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
+
+            self.prediction = tf.matmul(a=self.y_pre, b=self.y_post, transpose_a=True) + self.bias
+
+            self.loss = tf.reduce_mean(tf.square(self.prediction - self.target))
+
+            self.alpha_l1 = self.reg_scale[0]
+            self.alpha_l2 = self.reg_scale[1]
+
+            self.loss = self.loss + self.regularization()
