@@ -7,7 +7,7 @@ from os.path import join
 
 class Trainer(object):
 
-    def __init__(self, loss, input_name, target_name=None, session=None, save_dir=None, optimizer_op=tf.train.AdamOptimizer,
+    def __init__(self, loss, input_name, target_name=None, session=None, save_dir=None, save_name=None, optimizer_op=tf.train.AdamOptimizer,
                  optimizer_config={}):   # If ground truth kernel is given ,it will be used.
         self.loss = loss
         self.inputs_ = input_name
@@ -18,6 +18,7 @@ class Trainer(object):
         self.optimizer_config = optimizer_config
         self.loss_tracker = []      # Used for tracking the loss
         self.save_dir = save_dir
+        self.save_name = save_name
         self.mini_vali_loss = None
         self.build()
         self.init_session()
@@ -74,7 +75,7 @@ class Trainer(object):
 
         return fd
 
-    def train(self, train_data, vali_data, batch_size=256, save_model_freq=500, vali_freq=200, burn_in_steps=100,
+    def train(self, train_data, vali_data, batch_size=256, save_model_freq=-1, vali_freq=200, min_error=-1, burn_in_steps=100,
               early_stopping_steps=20, max_steps=10000, load_best=True, feed_dict=None):
         """
         Train the network until early stopping or maximum training number achieved.
@@ -83,6 +84,7 @@ class Trainer(object):
         :param batch_size: batch size for training
         :param save_model_freq: Number of training steps between saving the model
         :param vali_freq:  Number of steps between model validation
+        :param min_error: minimum error for stopping training
         :param burn_in_steps: Number of initial training steps without model validation
         :param early_stopping_steps: Number of non-improved validation steps before terminating the training
         :param max_steps: Maximum of number of training , if max_steps <=0, no maximum training number is enforced
@@ -110,7 +112,7 @@ class Trainer(object):
             step = 1
 
             while step < max_steps or max_steps <= 0:
-                if step % save_model_freq == 0:
+                if (step % save_model_freq == 0) & (save_model_freq > 0):
                     self.save(step)
 
                 x_train_batch, y_train_batch = train_data.next_batch(batch_size)
@@ -130,15 +132,19 @@ class Trainer(object):
                     print('Global Step %04d and Step %04d: validation cost=%.5f' % (global_step, step, vali_loss), flush=True)
 
                     # Perform early stopping
-                    if vali_loss < self.mini_vali_loss:
-                        self.mini_vali_loss = vali_loss
-                        print('Updated min validation loss!Saving model...')
-                        self.save_best()
+                    if (min_error < 0) | (vali_loss > min_error):
+                        if vali_loss < self.mini_vali_loss:
+                            self.mini_vali_loss = vali_loss
+                            print('Updated min validation loss!Saving model...')
+                            self.save_best()
+                        else:
+                            checks_without_update += 1
+                            if checks_without_update == early_stopping_steps:
+                                print('Early Stopping!!!')
+                                break
                     else:
-                        checks_without_update += 1
-                        if checks_without_update == early_stopping_steps:
-                            print('Early Stopping!!!')
-                            break
+                        print('Minimum error reached!!!')
+                        break
 
                 step += 1
 
@@ -169,15 +175,14 @@ class Trainer(object):
         """
         if step is None:
             step = self.session.run(self.global_step)
-        self.saver.save(self.session, join(self.save_dir, 'step'), global_step=step)
+        self.saver.save(self.session, join(self.save_dir, self.save_name, 'step'), global_step=step)
 
     def save_best(self):
         """
         Save the current state of the graph as best
         :return:
         """
-        self.saver_best.save(self.session, join(self.save_dir, 'best'))
-
+        self.saver_best.save(self.session, join(self.save_dir, self.save_name, 'best'))
 
     def restore_best(self):
 
@@ -185,5 +190,4 @@ class Trainer(object):
         Restore the last saved "best" state of the gragh.
         :return:
         """
-        self.saver_best.restore(self.session, join(self.save_dir, 'best'))
-
+        self.saver_best.restore(self.session, join(self.save_dir, self.save_name, 'best'))
