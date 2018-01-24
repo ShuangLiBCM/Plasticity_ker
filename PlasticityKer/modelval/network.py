@@ -39,21 +39,20 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, kernel_pre=None, kernel_post=None, ground_truth_init=1, reg_scale=[0, 0]):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=[0, 0]):
         """
         Create and build the PairNet
         :param kernel: Kernel object
         :param n_input: input dimension
-        :param kernel_pre: kernel used to convolve with pre-synaptic trains
-        :param kernel_post: kernel used to convolve with post-synaptic trains
         :param reg_scale: l1, and l2 regularization strength
         """
 
         self.graph = tf.Graph()
         self.kernel = kernel
         self.n_input = n_input
-        self.kernel_pre = kernel_pre
-        self.kernel_post = kernel_post
+        self.kernel_pre = kernel.kernel_pre
+        self.kernel_post = kernel.kernel_post
+        self.kernel_post_post = kernel.kernel_post_post
         self.reg_scale = reg_scale
         self.ground_truth_init = ground_truth_init
         self.build()
@@ -125,17 +124,13 @@ class PairNet(object):
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, kernel_pre_post=None, kernel_post_pre=None, kernel_post_post=None,
-                 ground_truth_init=1, reg_scale=[0, 0]):
-        self.kernel_post_post = kernel_post_post
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=[0, 0]):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init,
-                                      reg_scale=reg_scale, kernel_pre=kernel_pre_post, kernel_post=kernel_post_pre)
+                                      reg_scale=reg_scale)
         """
         Create and build the PairNet
         :param kernel: Kernel object
         :param n_input: input dimension
-        :param kernel_pre: kernel used to convolve with pre-synaptic trains
-        :param kernel_post: kernel used to convolve with post-synaptic trains
         :param reg_scale: l1, and l2 regularization strength
         """
 
@@ -150,7 +145,7 @@ class TripNet(PairNet):
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
             self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
-            self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1], name='target')
+            self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
 
             if self.ground_truth_init:  # Not in training mode
@@ -164,7 +159,7 @@ class TripNet(PairNet):
                 kernel_len = self.kernel.len_kernel
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
                 self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
-                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_post_kernel')
+                self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_post_kernel')
 
 
             self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
@@ -173,10 +168,10 @@ class TripNet(PairNet):
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
             self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)
 
-            self.pair_term1 = tf.reduce_sum(tf.multiply(tf.squeeze(self.y_pre), tf.squeeze(self.x_post)), 1)
-            self.pair_term2 = tf.reduce_sum(tf.multiply(tf.squeeze(self.y_post), tf.squeeze(self.x_pre)), 1)
-            self.trip_term = tf.reduce_sum(tf.multiply(tf.squeeze(tf.multiply(self.y_pre, self.y_post_post)),
-                                                                  tf.squeeze(self.x_post)), 1)
+            self.pair_term1 = tf.reduce_sum(tf.multiply(self.y_pre, tf.expand_dims(self.x_post, axis=2)), 1)
+            self.pair_term2 = tf.reduce_sum(tf.multiply(self.y_post, tf.expand_dims(self.x_pre, axis=2)), 1)
+            self.trip_term = tf.reduce_sum(tf.multiply(tf.multiply(self.y_pre, self.y_post_post),
+                                                                  tf.expand_dims(self.x_post, axis=2)), 1)
 
             self.prediction = self.pair_term1 + self.pair_term2 + self.trip_term + self.bias
 

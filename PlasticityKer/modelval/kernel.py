@@ -6,7 +6,7 @@ import numpy as np
 class KernelGen(object):
 
     def __init__(self, tau_left=100, tau_right=20, scale_left=1, scale_right=1, scale=1, side='right', tau=20,
-                 reso_kernel=2, len_kernel=51, kernel_pre_post=None, kernel_post_pre=None, kernel_post_post=None):
+                 reso_kernel=2, len_kernel=51):
         """
         Created and build the kernel
         :param tau_left: exponential decay tau for left side of kernel
@@ -27,15 +27,11 @@ class KernelGen(object):
         self.scale_right = scale_right
         self.scale = scale
         self.side = side
-        self.bilat_ker = self.bi_exp_ker()
-        self.unilat_ker = self.uni_exp_ker()
+        self.kernel_pre = self.dot_ker()
+        self.kernel_post = self.bi_exp_ker()
+        self.kernel_post_post = self.uni_exp_ker()
         self.dot_ker = self.dot_ker()
-
-        if kernel_pre_post is not None:
-            self.kernel_pre_post = kernel_pre_post
-            self.kernel_post_pre = kernel_post_pre
-            self.kernel_post_post = kernel_post_post
-
+        
     def bi_exp_ker(self):
         """
             Implement bilateral exponential decay kernel
