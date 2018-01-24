@@ -5,7 +5,7 @@ import numpy as np
 
 class KernelGen(object):
 
-    def __init__(self, tau_left=20, tau_right=20, tau=20, side='right', reso_kernel=2, len_kernel=51):
+    def __init__(self, tau_left=100, tau_right=20, scale_left=1, scale_right=1, scale=1, tau=20, side='right', reso_kernel=2, len_kernel=51):
         """
         Created and build the kernel
         :param tau_left: exponential decay tau for left side of kernel
@@ -22,6 +22,9 @@ class KernelGen(object):
         self.tau_left = tau_left
         self.tau_right = tau_right
         self.tau = tau
+        self.scale_left = scale_left
+        self.scale_right = scale_right
+        self.scale = scale
         self.side = side
         self.bilat_ker = self.bi_exp_ker()
         self.unilat_ker = self.uni_exp_ker()
@@ -35,8 +38,8 @@ class KernelGen(object):
         mid_pt = int((self.len_kernel - 1)/2)
         left_x = self.x[mid_pt] - self.x[0:mid_pt]
         right_x = self.x[mid_pt:]
-        kernel[0:mid_pt] = -1 * np.exp(-1 * left_x / self.tau_left)
-        kernel[mid_pt:] = np.exp(-1 * right_x / self.tau_right)
+        kernel[0:mid_pt] = -1 * np.exp(-1 * left_x / self.tau_left) * self.scale_left
+        kernel[mid_pt:] = np.exp(-1 * right_x / self.tau_right) * self.scale_right
         self.kernel = kernel.reshape(-1, 1)
 
         return self.kernel
@@ -49,10 +52,10 @@ class KernelGen(object):
         mid_pt = int((self.len_kernel - 1) / 2)
         if self.side == 'right':
             right_x = self.x[mid_pt:]
-            kernel[mid_pt:] = np.exp(-1 * right_x / self.tau)
+            kernel[mid_pt:] = np.exp(-1 * right_x / self.tau) * self.scale
         else:
             left_x = self.x[mid_pt] - self.x[0:mid_pt]
-            kernel[0:mid_pt] = np.exp(-1 * left_x / self.tau)
+            kernel[0:mid_pt] = np.exp(-1 * left_x / self.tau) * self.scale
         self.kernel = kernel.reshape(-1, 1)
 
         return self.kernel
@@ -63,7 +66,7 @@ class KernelGen(object):
         """
         kernel = np.zeros(self.len_kernel)
         mid_pt = int((self.len_kernel - 1) / 2)
-        kernel[mid_pt] = 1
+        kernel[mid_pt] = 1 * self.scale
         self.kernel = kernel.reshape(-1, 1)
 
         return self.kernel

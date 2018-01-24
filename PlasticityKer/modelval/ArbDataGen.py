@@ -150,7 +150,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=0):
     return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(df, ptl_list, kernel, spk_len=None, aug_times=10):
+def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, aug_times=1):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     ------------------------------
@@ -161,27 +161,27 @@ def arb_w_gen(df, ptl_list, kernel, spk_len=None, aug_times=10):
     :param aug_times: number of times to augment one protocol
     :return:
     """
+    if spk_pairs is None:
+        spk_pairs = []
 
-    spk_pairs = []
+        if spk_len is None:
+            spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
 
-    if spk_len is None:
-        spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
+        for i in range(len(ptl_list)):
+            data_ptl = df[df['ptl_idx'] == ptl_list[i]]
 
-    for i in range(len(ptl_list)):
-        data_ptl = df[df['ptl_idx'] == ptl_list[i]]
+            for j in range(len(data_ptl)):
+                ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
+                for _ in range(aug_times):
+                    _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
+                    spk_pairs.append(spk_pair)
 
-        for j in range(len(data_ptl)):
-            ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
-            for _ in range(aug_times):
-                _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
-                spk_pairs.append(spk_pair)
-
-    # Generate the spike data
-    spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
-
+        # Generate the spike data
+        spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
+    
     # Get the network used to generate prediction
     gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1], kernel_pre=kernel.dot_ker,
-                              kernel_post=kernel.bilat_ker)
+                                  kernel_post=kernel.bilat_ker)
 
     # Send the network graph into trainer, and name of placeholder
     gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, input_name=gen_pairnet.inputs)
