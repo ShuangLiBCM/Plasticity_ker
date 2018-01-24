@@ -19,7 +19,6 @@ class Trainer(object):
         self.optimizer_config = optimizer_config
         self.loss_tracker = []      # Used for tracking the loss
         self.save_dir = save_dir
-        self.mini_vali_loss = None
         self.build()
         self.init_session()
 
@@ -43,6 +42,8 @@ class Trainer(object):
     def init_session(self):
 
         self.session = self.session or tf.Session(graph=self.graph)
+        self.checks_without_update = 0  # Numbers of non-improved validation score check
+        self.mini_vali_loss = None
 
         with self.graph.as_default():
             self.session.run(self.init)
@@ -75,7 +76,7 @@ class Trainer(object):
 
         return fd
 
-    def train(self, train_data, vali_data, batch_size=256, save_model_freq=-1, vali_freq=200, min_error=-1, burn_in_steps=100,
+    def train(self, train_data, vali_data, batch_size=256, save_model_freq=-1, vali_freq=50, min_error=-1, burn_in_steps=100,
               early_stopping_steps=15, max_steps=-1, load_best=True, feed_dict=None):
         """
         Train the network until early stopping or maximum training number achieved.
@@ -98,7 +99,6 @@ class Trainer(object):
         with self.graph.as_default():
 
             burn_in_steps = burn_in_steps if burn_in_steps is not None else vali_freq * 4      # Prepare training steps before validation
-            checks_without_update = 0                   # Numbers of non-improved validation score check
             # Save the model before training
 
             sess = self.session
@@ -141,10 +141,10 @@ class Trainer(object):
                             self.mini_vali_loss = vali_loss
                             print('Updated min validation loss!Saving model...')
                             self.save_best()
-                            checks_without_update = 0
+                            self.checks_without_update = 0
                         else:
-                            checks_without_update += 1
-                            if checks_without_update == early_stopping_steps:
+                            self.checks_without_update += 1
+                            if self.checks_without_update == early_stopping_steps:
                                 print('Early Stopping!!!')
                                 break
                     else:
