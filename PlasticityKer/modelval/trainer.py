@@ -42,7 +42,6 @@ class Trainer(object):
     def init_session(self):
 
         self.session = self.session or tf.Session(graph=self.graph)
-        self.checks_without_update = 0  # Numbers of non-improved validation score check
         self.mini_vali_loss = None
 
         with self.graph.as_default():
@@ -100,7 +99,7 @@ class Trainer(object):
 
             burn_in_steps = burn_in_steps if burn_in_steps is not None else vali_freq * 4      # Prepare training steps before validation
             # Save the model before training
-
+            checks_without_update = 0  # Numbers of non-improved validation score check
             sess = self.session
 
             if self.mini_vali_loss is None:
@@ -141,10 +140,10 @@ class Trainer(object):
                             self.mini_vali_loss = vali_loss
                             print('Updated min validation loss!Saving model...')
                             self.save_best()
-                            self.checks_without_update = 0
+                            checks_without_update = 0
                         else:
-                            self.checks_without_update += 1
-                            if self.checks_without_update == early_stopping_steps:
+                            checks_without_update += 1
+                            if checks_without_update == early_stopping_steps:
                                 print('Early Stopping!!!')
                                 break
                     else:

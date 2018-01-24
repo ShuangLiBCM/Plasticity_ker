@@ -114,7 +114,6 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
                                               size=spk_time_post2.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
-            pdb.set_trace()
             spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso) + between_noise1
             spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso) + between_noise2
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
