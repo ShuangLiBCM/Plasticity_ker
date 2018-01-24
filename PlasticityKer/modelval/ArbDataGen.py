@@ -3,8 +3,9 @@
 """
 import numpy as np
 from modelval import pairptl, network, trainer
+import pdb
 
-def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=0):
+def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
     """
     Generate a single set of pre-spike, post-spike trains and target given the ptl
     -------------------------------
@@ -107,16 +108,29 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=0):
         if ptl.dt2 < 0:  # Pre-post-post-pre
             spk_time_post1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_post2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
-            spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso)
-            spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso)
+            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt1 / spk_reso), 2]),
+                                              size=spk_time_post1.shape).astype(int)
+            between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(ptl.dt1/spk_reso))
+            between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
+                                              size=spk_time_post2.shape).astype(int)
+            between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
+            pdb.set_trace()
+            spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso) + between_noise1
+            spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso) + between_noise2
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
 
         elif ptl.dt2 > 0:   # Post-pre-pre-post
             spk_time_pre1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_pre2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
-            spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso)
-            spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso)
+            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt1 / spk_reso), 2]),
+                                              size=spk_time_pre1.shape).astype(int)
+            between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(ptl.dt1/spk_reso))
+            between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
+                                              size=spk_time_pre2.shape).astype(int)
+            between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
+            spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso) + between_noise1
+            spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso) + between_noise2
             # Obtain spike train
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
