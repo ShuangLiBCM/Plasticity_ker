@@ -2,6 +2,7 @@
     Define noise
 """
 import tensorflow as tf
+import numpy as np
 
 class BaseNet(object):
 
@@ -157,13 +158,18 @@ class TripNet(PairNet):
                                                    name='const_post_post_kernel')
             else:
                 kernel_len = self.kernel.len_kernel
+                mask = np.zeros(shape=[kernel_len, 1])
+                mask[int(kernel_len/2)+1:,0]=1
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
+                self.kernel_pre = tf.multiply(self.kernel_pre, mask)
                 self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
+                self.kernel_post = tf.multiply(self.kernel_post, mask)
                 self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_post_kernel')
-
+                self.kernel_post_post = tf.multiply(self.kernel_post_post, mask)
 
             self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
-
+            
+            
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
             self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)
