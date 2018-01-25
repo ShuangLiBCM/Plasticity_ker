@@ -46,7 +46,7 @@ class KernelGen(object):
 
         return self.kernel
 
-    def uni_exp_ker(self, side=None, tau=None, scale=None， if_shift=False):
+    def uni_exp_ker(self, side=None, tau=None, scale=None, if_shift=False):
         """
             Implement unilateral exponential decay kernel
         """
