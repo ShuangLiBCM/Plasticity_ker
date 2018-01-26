@@ -146,6 +146,7 @@ class TripNet(PairNet):
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
             self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
+            self.x_post_post = tf.concat([self.x_post[:,1:], tf.expand_dims(self.x_post[:,0], axis=1)], axis=1)
             self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
 
@@ -159,7 +160,7 @@ class TripNet(PairNet):
             else:
                 kernel_len = self.kernel.len_kernel
                 mask = np.zeros(shape=[kernel_len, 1])
-                mask[int(kernel_len/2)+1:,0]=1
+                mask[:int((kernel_len-1)/2),0]=1
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
                 self.kernel_pre = tf.multiply(self.kernel_pre, mask)
                 self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
@@ -167,19 +168,16 @@ class TripNet(PairNet):
                 self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask)
 
-            self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
-            
-            
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
-            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)
+            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post * 10)
 
             self.pair_term1 = tf.reduce_sum(tf.multiply(self.y_pre, tf.expand_dims(self.x_post, axis=2)), 1)
             self.pair_term2 = tf.reduce_sum(tf.multiply(self.y_post, tf.expand_dims(self.x_pre, axis=2)), 1)
             self.trip_term = tf.reduce_sum(tf.multiply(tf.multiply(self.y_pre, self.y_post_post),
-                                                                  tf.expand_dims(self.x_post, axis=2)), 1)
+                                                                  tf.expand_dims(self.x_post_post, axis=2)), 1)
 
-            self.prediction = self.pair_term1 + self.pair_term2 + self.trip_term + self.bias
+            self.prediction = self.pair_term1 - self.pair_term2 + self.trip_term
 
             self.loss = tf.reduce_mean(tf.square(self.prediction - self.target))
 

@@ -163,7 +163,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
     return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, aug_times=1, net_type='pair'):
+def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, aug_times=None, net_type='pair'):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     ------------------------------
@@ -171,7 +171,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
     :param ptl_list: list of protocol indices
     :param kernel: kernel object used to generate the toy data
     :param spk_len: total length of spike train
-    :param aug_times: number of times to augment one protocol
+    :param aug_times: list number of times to augment for each member of ptl_list
     :return:
     """
     if spk_pairs is None:
@@ -185,7 +185,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
             for j in range(len(data_ptl)):
                 ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
-                for _ in range(aug_times):
+                for _ in range(aug_times[i]):
                     _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
                     spk_pairs.append(spk_pair)
 

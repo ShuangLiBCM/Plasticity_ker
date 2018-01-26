@@ -32,12 +32,15 @@ class KernelGen(object):
         self.kernel_post_post = self.uni_exp_ker()
         self.dot_ker = self.dot_ker()
         
-    def bi_exp_ker(self):
+    def bi_exp_ker(self, len_kernel=None):
         """
             Implement bilateral exponential decay kernel
         """
-        kernel = np.zeros(self.len_kernel)
-        mid_pt = int((self.len_kernel - 1)/2)
+        if len_kernel is None:
+            len_kernel = self.len_kernel
+            
+        kernel = np.zeros(len_kernel)
+        mid_pt = int((len_kernel - 1)/2)
         left_x = self.x[mid_pt] - self.x[0:mid_pt]
         right_x = self.x[mid_pt:]
         kernel[0:mid_pt] = -1 * np.exp(-1 * left_x / self.tau_left) * self.scale_left
@@ -46,10 +49,13 @@ class KernelGen(object):
 
         return self.kernel
 
-    def uni_exp_ker(self, side=None, tau=None, scale=None, if_shift=False):
+    def uni_exp_ker(self, side=None, tau=None, scale=None, if_shift=False, len_kernel=None):
         """
             Implement unilateral exponential decay kernel
         """
+        if len_kernel is None:
+            len_kernel = self.len_kernel
+            
         if side is None:
             side = self.side
 
@@ -59,31 +65,34 @@ class KernelGen(object):
         if scale is None:
             scale = self.scale
 
-        kernel = np.zeros(self.len_kernel)
-        mid_pt = int((self.len_kernel - 1) / 2)
+        kernel = np.zeros(len_kernel)
+        mid_pt = int((len_kernel - 1) / 2)
         if side == 'right':
-            right_x = self.x[mid_pt:]
+            right_x = self.x[mid_pt+1:]
             if if_shift:
-                kernel[mid_pt+1:] = np.exp(-1 * right_x[:-1] / tau) * scale
+                kernel[mid_pt+2:] = np.exp(-1 * right_x[:-1] / tau) * scale
             else:
-                kernel[mid_pt:] = np.exp(-1 * right_x / tau) * scale
+                kernel[mid_pt+1:] = np.exp(-1 * right_x / tau) * scale
         else:
-            left_x = self.x[mid_pt] - self.x[0:mid_pt+1]
+            left_x = self.x[mid_pt-1] - self.x[0:mid_pt]
             if if_shift:
-                kernel[0:mid_pt] = np.exp(-1 * left_x[1:] / tau) * scale
+                kernel[0:mid_pt-1] = np.exp(-1 * left_x[1:] / tau) * scale
             else:
-                kernel[0:mid_pt+1] = np.exp(-1 * left_x / tau) * scale
+                kernel[0:mid_pt] = np.exp(-1 * left_x / tau) * scale
                 
         self.kernel = kernel.reshape(-1, 1)
         
         return self.kernel
 
-    def dot_ker(self):
+    def dot_ker(self, len_kernel=None):
         """
             Implement kernel that preserves original data
         """
-        kernel = np.zeros(self.len_kernel)
-        mid_pt = int((self.len_kernel - 1) / 2)
+        if len_kernel is None:
+            len_kernel = self.len_kernel
+            
+        kernel = np.zeros(len_kernel)
+        mid_pt = int((len_kernel - 1) / 2)
         kernel[mid_pt] = 1 * self.scale
         self.kernel = kernel.reshape(-1, 1)
 

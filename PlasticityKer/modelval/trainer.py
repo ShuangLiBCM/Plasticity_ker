@@ -128,7 +128,7 @@ class Trainer(object):
                     fd = self.make_feed_dict(x_train_batch, y_train_batch, feed_dict=feed_dict)
                     train_loss = sess.run(self.loss, feed_dict=fd)
 
-                    x_vali_batch, y_vali_batch = vali_data.batch(batch_size)
+                    x_vali_batch, y_vali_batch = vali_data.x, vali_data.y    # Use the whole validation set
                     fd = self.make_feed_dict(x_vali_batch, y_vali_batch, feed_dict=feed_dict)
                     vali_loss = sess.run(self.loss, feed_dict=fd)
                     self.loss_tracker.append([train_loss, vali_loss])
