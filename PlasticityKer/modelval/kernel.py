@@ -49,7 +49,7 @@ class KernelGen(object):
 
         return self.kernel
 
-    def uni_exp_ker(self, side=None, tau=None, scale=None, if_shift=False, len_kernel=None):
+    def uni_exp_ker(self, side=None, tau=None, scale=None, shift=None, len_kernel=None):
         """
             Implement unilateral exponential decay kernel
         """
@@ -68,16 +68,24 @@ class KernelGen(object):
         kernel = np.zeros(len_kernel)
         mid_pt = int((len_kernel - 1) / 2)
         if side == 'right':
-            right_x = self.x[mid_pt+1:]
-            if if_shift:
-                kernel[mid_pt+2:] = np.exp(-1 * right_x[:-1] / tau) * scale
+            if shift == 1:
+                right_x = self.x[mid_pt+2:] - self.x[mid_pt+2]
+                kernel[mid_pt+2:] = np.exp(-1 * right_x / tau) * scale
+            elif shift == -1:
+                right_x = self.x[mid_pt:] - self.x[mid_pt]
+                kernel[mid_pt:] = np.exp(-1 * right_x / tau) * scale
             else:
+                right_x = self.x[mid_pt+1:] - self.x[mid_pt+1]
                 kernel[mid_pt+1:] = np.exp(-1 * right_x / tau) * scale
         else:
-            left_x = self.x[mid_pt-1] - self.x[0:mid_pt]
-            if if_shift:
+            if shift == 1:
+                left_x = self.x[mid_pt-1] - self.x[0:mid_pt]
                 kernel[0:mid_pt-1] = np.exp(-1 * left_x[1:] / tau) * scale
+            elif shift == -1:
+                left_x = self.x[mid_pt] - self.x[0:mid_pt+1]
+                kernel[0:mid_pt+1] = np.exp(-1 * left_x / tau) * scale
             else:
+                left_x = self.x[mid_pt-1] - self.x[0:mid_pt]
                 kernel[0:mid_pt] = np.exp(-1 * left_x / tau) * scale
                 
         self.kernel = kernel.reshape(-1, 1)

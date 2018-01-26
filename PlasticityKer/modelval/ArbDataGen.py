@@ -145,10 +145,24 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
 
         spk_time_pre = np.sort(np.concatenate([spk_time_base5 + rep_interval * i for i in range(rep_num)]))
         mean_dt = int(ptl.dt1/spk_reso)
-        if if_noise & (mean_dt > 0):
-            between_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_pre.shape).astype(int)
-            between_noise = between_noise * (np.abs(between_noise) < np.abs(mean_dt))
-            spk_time_post = spk_time_pre + mean_dt + between_noise
+        spk_time_post = np.zeros(spk_time_pre.shape).astype(int)
+        if if_noise:
+            between_noise = np.random.normal(loc=0.0, scale=np.max([np.abs(mean_dt)/2, (isi-np.abs(mean_dt))/2]), size=spk_time_pre.shape).astype(int)
+            for i in range(between_noise.shape[0]):
+                if mean_dt < 0:
+                    if mean_dt + between_noise[i] >= 0:
+                        spk_time_post[i] = int(spk_time_pre[i] - 1)
+                    elif -mean_dt - between_noise[i] >= isi:
+                        spk_time_post[i] = int(spk_time_pre[i] - isi + 1)
+                    else:
+                        spk_time_post[i] = int(spk_time_pre[i] + mean_dt + between_noise[i])
+                else:
+                    if mean_dt + between_noise[i] < 0:
+                        spk_time_post[i] = int(spk_time_pre[i] + 1)
+                    elif mean_dt + between_noise[i] >= isi:
+                        spk_time_post[i] = int(spk_time_pre[i] + isi - 1)
+                    else:
+                        spk_time_post[i] = int(spk_time_pre[i] + mean_dt + between_noise[i])
         else:
             spk_time_post = spk_time_pre + mean_dt
 
