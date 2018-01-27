@@ -160,13 +160,15 @@ class TripNet(PairNet):
             else:
                 kernel_len = self.kernel.len_kernel
                 mask = np.zeros(shape=[kernel_len, 1])
+                mask2 = np.zeros(shape=[kernel_len, 1])
                 mask[:int((kernel_len-1)/2),0]=1
+                mask2[:int((kernel_len-1)/2)+1,0]=1
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
-                self.kernel_pre = tf.multiply(self.kernel_pre, mask)
+                self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
                 self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
                 self.kernel_post = tf.multiply(self.kernel_post, mask)
                 self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_post_kernel')
-                self.kernel_post_post = tf.multiply(self.kernel_post_post, mask)
+                self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
 
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)

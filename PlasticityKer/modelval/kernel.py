@@ -70,7 +70,7 @@ class KernelGen(object):
         if side == 'right':
             if shift == 1:
                 right_x = self.x[mid_pt+2:] - self.x[mid_pt+2]
-                kernel[mid_pt+2:] = np.exp(-1 * right_x / tau) * scale
+                kernel[mid_pt:] = np.exp(-1 * right_x / tau) * scale
             elif shift == -1:
                 right_x = self.x[mid_pt:] - self.x[mid_pt]
                 kernel[mid_pt:] = np.exp(-1 * right_x / tau) * scale
