@@ -39,10 +39,10 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
     # pre-post: 1-1
     if (int(ptl.pre_spk_num) == 1) & (int(ptl.post_spk_num) == 1):
         # Seed the seed generator
-        np.random.seed(seed_gen)
-        seed_input = np.random.randint(0, 100, 2)
+        # np.random.seed(seed_gen)
+        # seed_input = np.random.randint(0, 100, 2)
 
-        np.random.seed(seed_input[0])
+        # np.random.seed(seed_input[0])
         spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         # Obtain time index of spike
         spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
@@ -50,7 +50,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
 
         # Generate noise
         if if_noise:
-            np.random.seed(seed_input[1])
+            # np.random.seed(seed_input[1])
             between_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_pre.shape).astype(int)
             between_noise = between_noise * (np.abs(between_noise) < np.abs(mean_dt))
             spk_time_post = spk_time_pre + mean_dt + between_noise   # dt1, dt2, dt3 in ms
@@ -60,21 +60,21 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
     # pre-post: 2-1
     elif (int(ptl.pre_spk_num) == 2) & (int(ptl.post_spk_num) == 1):
         # Seed the seed generator
-        np.random.seed(seed_gen)
-        seed_input = np.random.randint(0, 100, 3)
+        # np.random.seed(seed_gen)
+        # seed_input = np.random.randint(0, 100, 3)
 
-        np.random.seed(seed_input[0])
+        # np.random.seed(seed_input[0])
         spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         mean_dt1 = int(ptl.dt1 / spk_reso)
         mean_dt2 = int(ptl.dt2 / spk_reso)
         # Obtain time index of spike
         if if_noise:
             spk_time_post = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
-            np.random.seed(seed_input[1])
+            # np.random.seed(seed_input[1])
             between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 2]), size=spk_time_post.shape).astype(int)
             between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(mean_dt1))
             spk_time_pre1 = spk_time_post + mean_dt1 + between_noise1
-            np.random.seed(seed_input[2])
+            # np.random.seed(seed_input[2])
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt2/2), 2]), size=spk_time_post.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(mean_dt2))
             spk_time_pre2 = spk_time_post + mean_dt2 + between_noise2
@@ -88,21 +88,21 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
     # pre-post: 1-2
     elif (int(ptl.pre_spk_num) == 1) & (int(ptl.post_spk_num) == 2):
         # Seed the seed generator
-        np.random.seed(seed_gen)
-        seed_input = np.random.randint(0, 100, 3)
+        # np.random.seed(seed_gen)
+        # seed_input = np.random.randint(0, 100, 3)
 
-        np.random.seed(seed_input[0])
+        # np.random.seed(seed_input[0])
         spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         mean_dt1 = int(ptl.dt1 / spk_reso)
         mean_dt2 = int(ptl.dt2 / spk_reso)
         # Obtain time index of spike
         if if_noise:
             spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
-            np.random.seed(seed_input[1])
+            # np.random.seed(seed_input[1])
             between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 2]), size=spk_time_pre.shape).astype(int)
             between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(ptl.dt1/spk_reso))
             spk_time_post1 = spk_time_pre - mean_dt1 + between_noise1
-            np.random.seed(seed_input[2])
+            # np.random.seed(seed_input[2])
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt2/2), 2]), size=spk_time_pre.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(mean_dt2))
             spk_time_post2 = spk_time_pre - mean_dt2 + between_noise2
@@ -116,14 +116,14 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
     # pre-post: 2-2
     elif (int(ptl.pre_spk_num) == 2) & (int(ptl.post_spk_num) == 2):
         # Seed the seed generator
-        np.random.seed(seed_gen)
-        seed_input = np.random.randint(0, 100, 4)
+        # np.random.seed(seed_gen)
+        # seed_input = np.random.randint(0, 100, 4)
 
-        np.random.seed(seed_input[0])
+        # np.random.seed(seed_input[0])
         spk_time_base1 = np.random.randint(min_bef, rep_interval - min_bef, 1)
         mean_dt = int(ptl.dt2/spk_reso)
         if if_noise:
-            np.random.seed(seed_input[1])
+            # np.random.seed(seed_input[1])
             within_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_base1.shape).astype(int)
             within_noise = within_noise * (np.abs(within_noise) < np.abs(mean_dt))
             spk_time_base2 = spk_time_base1 + np.abs(mean_dt) + within_noise
@@ -133,11 +133,11 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
         if ptl.dt2 < 0:  # Pre-post-post-pre
             spk_time_post1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_post2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
-            np.random.seed(seed_input[2])
+            # np.random.seed(seed_input[2])
             between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt1 / spk_reso), 2]),
                                               size=spk_time_post1.shape).astype(int)
             between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(ptl.dt1/spk_reso))
-            np.random.seed(seed_input[3])
+            # np.random.seed(seed_input[3])
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
                                               size=spk_time_post2.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
@@ -149,11 +149,11 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
         elif ptl.dt2 > 0:   # Post-pre-pre-post
             spk_time_pre1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_pre2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
-            np.random.seed(seed_input[2])
+            # np.random.seed(seed_input[2])
             between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt1 / spk_reso), 2]),
                                               size=spk_time_pre1.shape).astype(int)
             between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(ptl.dt1/spk_reso))
-            np.random.seed(seed_input[3])
+            # np.random.seed(seed_input[3])
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
                                               size=spk_time_pre2.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
@@ -169,10 +169,10 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
     # pre-post: 5-5
     elif (int(ptl.pre_spk_num) == 5) & (int(ptl.post_spk_num) == 5):
         # Seed the seed generator
-        np.random.seed(seed_gen)
-        seed_input = np.random.randint(0, 100, 2)
+        # np.random.seed(seed_gen)
+        # seed_input = np.random.randint(0, 100, 2)
 
-        np.random.seed(seed_input[0])
+        # np.random.seed(seed_input[0])
         spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         isi = int(1000 / ptl.pre_spk_freq / spk_reso)
         spk_time_base5 = np.hstack([spk_time_base + isi * i for i in range(5)])
@@ -181,7 +181,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed_gen=0):
         mean_dt = int(ptl.dt1/spk_reso)
         spk_time_post = np.zeros(spk_time_pre.shape).astype(int)
         if if_noise:
-            np.random.seed(seed_input[1])
+            # np.random.seed(seed_input[1])
             between_noise = np.random.normal(loc=0.0, scale=np.max([np.abs(mean_dt)/2, (isi-np.abs(mean_dt))/2]), size=spk_time_pre.shape).astype(int)
             for i in range(between_noise.shape[0]):
                 if mean_dt < 0:
