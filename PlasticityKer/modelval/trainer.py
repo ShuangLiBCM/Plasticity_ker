@@ -14,7 +14,7 @@ class Trainer(object):
         self.total_loss = total_loss
         self.inputs_ = input_name
         self.targets_ = target_name
-        self.graph = loss.graph
+        self.graph = total_loss.graph
         self.session = session
         self.optimizer_op = optimizer_op
         self.optimizer_config = optimizer_config
