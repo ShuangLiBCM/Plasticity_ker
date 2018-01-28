@@ -126,7 +126,7 @@ class PairNet(object):
         # Seed the random initializer for kernel_pre and kernel_post
         initializer = []
         for i in range(len(self.init_seed)):
-            initializer.append(tf.random_uniform_initializer(seed=self.init_seed[i]))
+            initializer.append(tf.contrib.layers.xavier_initializer(seed=self.init_seed[i]))
 
         return initializer
 
