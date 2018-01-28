@@ -153,6 +153,8 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
                 if mean_dt < 0:
                     if mean_dt + between_noise[i] >= 0:
                         spk_time_post[i] = int(spk_time_pre[i])
+                        if spk_time_post[i] >= spk_pair.shape[0]:
+                            spk_time_post[i] = spk_pair.shape[0]-1
                     elif -mean_dt - between_noise[i] >= isi:
                         spk_time_post[i] = int(spk_time_pre[i] - isi + 1)
                     else:
@@ -160,13 +162,15 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
                 else:
                     if mean_dt + between_noise[i] < 0:
                         spk_time_post[i] = int(spk_time_pre[i] + 1)
+                        if spk_time_post[i] >= spk_pair.shape[0]:
+                            spk_time_post[i] = spk_pair.shape[0]-1
                     elif mean_dt + between_noise[i] >= isi:
                         spk_time_post[i] = int(spk_time_pre[i] + isi)
                     else:
                         spk_time_post[i] = int(spk_time_pre[i] + mean_dt + between_noise[i])
         else:
             spk_time_post = spk_time_pre + mean_dt
-
+        
     else:
         print('Wrong ptl!')
 
