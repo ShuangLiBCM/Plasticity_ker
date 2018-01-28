@@ -40,7 +40,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=[0, 0]):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=[0, 0], init_seed=[0]):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -56,6 +56,7 @@ class PairNet(object):
         self.kernel_post_post = kernel.kernel_post_post
         self.reg_scale = reg_scale
         self.ground_truth_init = ground_truth_init
+        self.init_seed = init_seed
         self.build()
 
     def build(self):
@@ -78,7 +79,8 @@ class PairNet(object):
                                                    name='const_post_kernel')
             else:
                 kernel_len = self.kernel.len_kernel
-                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
+                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
+                                                   initializer=self.random_init()[0], name='post_kernel')
 
             self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
 
@@ -120,14 +122,22 @@ class PairNet(object):
 
         return self.alpha_l1 * l1_penalty + self.alpha_l2 * l2_penalty
 
+    def random_init(self):
+        # Seed the random initializer for kernel_pre and kernel_post
+        initializer = []
+        for i in range(len(self.init_seed)):
+            initializer.append(tf.random_uniform_initializer(seed=self.init_seed[i]))
+
+        return initializer
+
 # ==============================================================================================
 
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=[0, 0]):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=[0, 0], init_seed=[0, 1, 2]):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init,
-                                      reg_scale=reg_scale)
+                                      reg_scale=reg_scale, init_seed=init_seed)
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -163,11 +173,14 @@ class TripNet(PairNet):
                 mask2 = np.zeros(shape=[kernel_len, 1])
                 mask[:int((kernel_len-1)/2),0]=1
                 mask2[:int((kernel_len-1)/2)+1,0]=1
-                self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='pre_kernel')
+                self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
+                                                  initializer=self.random_init()[0], name='pre_kernel')
                 self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
-                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_kernel')
+                self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
+                                                   initializer=self.random_init()[1], name='post_kernel')
                 self.kernel_post = tf.multiply(self.kernel_post, mask)
-                self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1], name='post_post_kernel')
+                self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
+                                                        initializer=self.random_init()[2], name='post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
 
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
