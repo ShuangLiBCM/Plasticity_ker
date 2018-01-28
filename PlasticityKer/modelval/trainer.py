@@ -8,9 +8,10 @@ from os import path, makedirs
 
 class Trainer(object):
 
-    def __init__(self, loss, input_name, target_name=None, session=None, save_dir=None, optimizer_op=tf.train.AdamOptimizer,
+    def __init__(self, mse, total_loss, input_name, target_name=None, session=None, save_dir=None, optimizer_op=tf.train.AdamOptimizer,
                  optimizer_config={}):   # If ground truth kernel is given ,it will be used.
-        self.loss = loss
+        self.loss = mse
+        self.total_loss = total_loss
         self.inputs_ = input_name
         self.targets_ = target_name
         self.graph = loss.graph
@@ -30,7 +31,7 @@ class Trainer(object):
             self.global_step = tf.Variable(0, trainable=False,
                                            name='global_step')  # Count how many times the network got updated
 
-            self.train_step = self.optimizer.minimize(self.loss, global_step=self.global_step)
+            self.train_step = self.optimizer.minimize(self.total_loss, global_step=self.global_step)
 
             # Configure to load all variables except for the global step variable
 

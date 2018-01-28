@@ -89,12 +89,12 @@ class PairNet(object):
 
             self.prediction = tf.reduce_sum(tf.multiply(self.y_pre, self.y_post), 1) + self.bias
 
-            self.loss = tf.reduce_mean(tf.square(self.prediction - self.target))
+            self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
 
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.loss = self.loss + self.regularization()
+            self.loss = self.mse + self.regularization()
 
     def conv_1d(self, data=None, kernel=None):
         """
@@ -192,9 +192,9 @@ class TripNet(PairNet):
 
             self.prediction = self.pair_term1 - self.pair_term2 + self.trip_term
 
-            self.loss = tf.reduce_mean(tf.square(self.prediction - self.target))
+            self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
 
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.loss = self.loss + self.regularization()
+            self.loss = self.mse + self.regularization()
