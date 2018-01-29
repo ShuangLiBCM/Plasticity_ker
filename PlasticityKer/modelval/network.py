@@ -133,7 +133,7 @@ class PairNet(object):
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(0, 0), init_seed=(0, 1, 2)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(0, 0), init_seed=(0, 1, 2, 3)):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init,
                                       reg_scale=reg_scale, init_seed=init_seed)
         """
@@ -154,7 +154,7 @@ class TripNet(PairNet):
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
             self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
-            self.x_post_post = tf.concat([self.x_post[:,1:], tf.expand_dims(self.x_post[:,0], axis=1)], axis=1)
+            self.x_post_post = tf.concat([self.x_post[:, 1:], tf.expand_dims(self.x_post[:,0], axis=1)], axis=1)
             self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
 
@@ -181,6 +181,9 @@ class TripNet(PairNet):
                                                         initializer=self.random_init(self.init_seed[2]), name='post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
 
+            self.fc_w =tf.get_variable(dtype=tf.float32, shape=[3, 1],
+                                       initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
+
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
             self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post * 10)
@@ -190,7 +193,9 @@ class TripNet(PairNet):
             self.trip_term = tf.reduce_sum(tf.multiply(tf.multiply(self.y_pre, self.y_post_post),
                                                                   tf.expand_dims(self.x_post_post, axis=2)), 1)
 
-            self.prediction = self.pair_term1 - self.pair_term2 + self.trip_term
+            self.terms = tf.concat([self.pair_term1, self.pair_term2, self.trip_term], axis=1)
+
+            self.prediction = tf.matmul(self.fc_w, self.terms, transpose_a=True)
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
 

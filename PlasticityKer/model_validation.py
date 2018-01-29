@@ -140,21 +140,23 @@ class ModelSelection(dj.Computed):
     def _make_tuples(self, key):
         print('Populating', key, flush=True)
 
-        # train one model with values from key here
-        # if key['random_start']:
-        # Data generation
-        # data = kernel_data_aug.DataAug(jitter = key['jitters'])
-        # data_input = data.data_input
-        # data.data_gen()
-
         # Fetch data from the server and save temporally locally
         if self.tmppath is None:
             self.tmppath = tempfile.mkdtemp()
-            copyfile('/data/data_input_1k.npy', join(self.tmppath, 'data_input_1k.npy'))
-            copyfile('/data/target_final_1k.npy', join(self.tmppath, 'target_final_1k.npy'))
-            copyfile('/data/pre_kernel_1k.npy', join(self.tmppath, 'pre_kernel_1k.npy'))
-            copyfile('/data/post_kernel_1k.npy', join(self.tmppath, 'post_kernel_1k.npy'))
 
+            data_name = (Dataset() & key).fetch1['dataset_name']
+
+            # Save the target final temporally in the local path
+            if data_name == 'STDP':
+                copyfile('/data/STDP_spike_pairs.npy', join(self.tmppath, 'STDP_spike_pairs.npy'))
+            elif data_name == 'Hippocampus':
+                copyfile('/data/Hippo_spike_pairs', join(self.tmppath, 'Hippo_spike_pairs'))
+            elif data_name == 'VisualCortex':
+                copyfile('/data/Visual_cortex_spike_pairs.npy', join(self.tmppath, 'Visual_cortex_spike_pairs.npy'))
+            else:
+                print('Wrong data name!!')
+                return
+        # Generate the target with the designated kernel
         data_input = np.load(join(self.tmppath, 'data_input_1k.npy'))
         target_final = np.load(join(self.tmppath, 'target_final_1k.npy'))
         kernel_pre = np.load(join(self.tmppath, 'pre_kernel_1k.npy'))
