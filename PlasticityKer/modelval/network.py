@@ -128,7 +128,9 @@ class PairNet(object):
         initializer = tf.contrib.layers.xavier_initializer(seed=seed)
 
         return initializer
-
+    
+    def normliazation(self, kernel_raw):
+        return (kernel_raw/tf.norm(kernel_raw, order=2, keep_dims=True)
 # ==============================================================================================
 
 
@@ -191,9 +193,9 @@ class TripNet(PairNet):
                 self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
 
-            self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre/tf.norm(self.kernel_pre, ord=1, keep_dims=True))
-            self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)/tf.norm(self.kernel_post, ord=1, keep_dims=True)
-            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)/tf.norm(self.kernel_post_post, ord=1, keep_dims=True)
+            self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.normliazation(self.kernel_pre))
+            self.y_post = self.conv_1d(data=self.x_post, kernel=self.normliazation(self.kernel_post))
+            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.normliazation(self.kernel_post_post))
 
             self.pair_term1 = tf.reduce_sum(tf.multiply(self.y_pre, tf.expand_dims(self.x_post, axis=2)), 1)
             self.pair_term2 = tf.reduce_sum(tf.multiply(self.y_post, tf.expand_dims(self.x_pre, axis=2)), 1)
