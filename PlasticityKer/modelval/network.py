@@ -188,21 +188,19 @@ class TripNet(PairNet):
                                                         initializer=self.random_init(self.init_seed[2]), name='post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
 
-                self.fc_w =tf.get_variable(dtype=tf.float32, shape=[3, 1],
+                self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
 
-            self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
-            self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
-            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post * 10)
+            self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre/tf.norm(self.kernel_pre, ord=1, keep_dims=True))
+            self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)/tf.norm(self.kernel_post, ord=1, keep_dims=True)
+            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)/tf.norm(self.kernel_post_post, ord=1, keep_dims=True)
 
             self.pair_term1 = tf.reduce_sum(tf.multiply(self.y_pre, tf.expand_dims(self.x_post, axis=2)), 1)
             self.pair_term2 = tf.reduce_sum(tf.multiply(self.y_post, tf.expand_dims(self.x_pre, axis=2)), 1)
             self.trip_term = tf.reduce_sum(tf.multiply(tf.multiply(self.y_pre, self.y_post_post),
                                                                   tf.expand_dims(self.x_post_post, axis=2)), 1)
 
-            self.terms = tf.concat([self.pair_term1/tf.norm(self.pair_term1, ord=1, keepdims=True),
-                                    -1 * self.pair_term2/tf.norm(self.pair_term2, ord=1, keepdims=True),
-                                    self.trip_term/tf.norm(self.pair_term2, ord=1, keepdims=True)], axis=1)
+            self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2, self.trip_term], axis=1)
 
             self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1))
 
