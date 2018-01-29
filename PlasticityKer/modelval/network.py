@@ -134,7 +134,7 @@ class PairNet(object):
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3,1)), reg_scale=(0, 0), init_seed=(0, 1, 2, 3)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3, 1)), reg_scale=(0, 0), init_seed=(0, 1, 2, 3)):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init,
                                       kernel_scale=kernel_scale, reg_scale=reg_scale, init_seed=init_seed)
         """
@@ -200,7 +200,9 @@ class TripNet(PairNet):
             self.trip_term = tf.reduce_sum(tf.multiply(tf.multiply(self.y_pre, self.y_post_post),
                                                                   tf.expand_dims(self.x_post_post, axis=2)), 1)
 
-            self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2, self.trip_term], axis=1)
+            self.terms = tf.concat([self.pair_term1/tf.norm(self.pair_term1, ord=1, keepdims=True),
+                                    -1 * self.pair_term2/tf.norm(self.pair_term2, ord=1, keepdims=True),
+                                    self.trip_term/tf.norm(self.pair_term2, ord=1, keepdims=True)], axis=1)
 
             self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1))
 
