@@ -40,7 +40,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(0, 0), init_seed=0):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=1, reg_scale=(0, 0), init_seed=0):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -51,9 +51,10 @@ class PairNet(object):
         self.graph = tf.Graph()
         self.kernel = kernel
         self.n_input = n_input
-        self.kernel_pre = kernel.kernel_pre
-        self.kernel_post = kernel.kernel_post
-        self.kernel_post_post = kernel.kernel_post_post
+        self.kernel_pre_const = kernel.kernel_pre
+        self.kernel_post_const = kernel.kernel_post
+        self.kernel_post_post_const = kernel.kernel_post_post
+        self.kernel_scale = kernel_scale
         self.reg_scale = reg_scale
         self.ground_truth_init = ground_truth_init
         self.init_seed = init_seed
@@ -75,7 +76,7 @@ class PairNet(object):
             self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre), trainable=False,
                                                   name='const_pre_kernel')
             if self.ground_truth_init:  # Not in training model
-                self.kernel_post = tf.get_variable(shape=self.kernel_post.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post),
+                self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post * self.kernel_scale),
                                                    name='const_post_kernel')
             else:
                 kernel_len = self.kernel.len_kernel
@@ -133,9 +134,9 @@ class PairNet(object):
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(0, 0), init_seed=(0, 1, 2, 3)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3,1)), reg_scale=(0, 0), init_seed=(0, 1, 2, 3)):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init,
-                                      reg_scale=reg_scale, init_seed=init_seed)
+                                      kernel_scale=kernel_scale, reg_scale=reg_scale, init_seed=init_seed)
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -157,20 +158,26 @@ class TripNet(PairNet):
             self.x_post_post = tf.concat([self.x_post[:, 1:], tf.expand_dims(self.x_post[:,0], axis=1)], axis=1)
             self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
+            kernel_len = self.kernel.len_kernel
 
+            mask = np.zeros(shape=[kernel_len, 1])
+            mask2 = np.zeros(shape=[kernel_len, 1])
+            mask[:int((kernel_len-1)/2),0]=1
+            mask2[:int((kernel_len-1)/2)+1,0]=1
+            
             if self.ground_truth_init:  # Not in training mode
-                self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre),
+                self.kernel_pre = tf.get_variable(shape=self.kernel_pre_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre_const),
                                                   name='const_pre_kernel')
-                self.kernel_post = tf.get_variable(shape=self.kernel_post.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post),
+                self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
+                self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_const),
                                                    name='const_post_kernel')
-                self.kernel_post_post = tf.get_variable(shape=self.kernel_post_post.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_post),
+                self.kernel_post = tf.multiply(self.kernel_post, mask)
+                self.kernel_post_post = tf.get_variable(shape=self.kernel_post_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_post_const),
                                                    name='const_post_post_kernel')
+                self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_scale),
+                                                   name='const_fully_connect_weights')
+                self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
             else:
-                kernel_len = self.kernel.len_kernel
-                mask = np.zeros(shape=[kernel_len, 1])
-                mask2 = np.zeros(shape=[kernel_len, 1])
-                mask[:int((kernel_len-1)/2),0]=1
-                mask2[:int((kernel_len-1)/2)+1,0]=1
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
                                                   initializer=self.random_init(self.init_seed[0]), name='pre_kernel')
                 self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
@@ -181,8 +188,8 @@ class TripNet(PairNet):
                                                         initializer=self.random_init(self.init_seed[2]), name='post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
 
-            self.fc_w =tf.get_variable(dtype=tf.float32, shape=[3, 1],
-                                       initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
+                self.fc_w =tf.get_variable(dtype=tf.float32, shape=[3, 1],
+                                           initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
 
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
@@ -193,9 +200,9 @@ class TripNet(PairNet):
             self.trip_term = tf.reduce_sum(tf.multiply(tf.multiply(self.y_pre, self.y_post_post),
                                                                   tf.expand_dims(self.x_post_post, axis=2)), 1)
 
-            self.terms = tf.concat([self.pair_term1, self.pair_term2, self.trip_term], axis=1)
+            self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2, self.trip_term], axis=1)
 
-            self.prediction = tf.matmul(self.fc_w, self.terms, transpose_a=True)
+            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1))
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
 
