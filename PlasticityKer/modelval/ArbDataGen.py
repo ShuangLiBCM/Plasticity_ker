@@ -140,8 +140,8 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
 
     # pre-post: 5-5
     elif (int(ptl.pre_spk_num) == 5) & (int(ptl.post_spk_num) == 5):
-        spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         isi = int(1000 / ptl.pre_spk_freq / spk_reso)
+        spk_time_base = np.random.randint(min_bef, rep_interval - isi - min_bef, 1)
         spk_time_base5 = np.hstack([spk_time_base + isi * i for i in range(5)])
 
         spk_time_pre = np.sort(np.concatenate([spk_time_base5 + rep_interval * i for i in range(rep_num)]))
@@ -215,7 +215,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
     if net_type == 'pair':
         gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1])
         # Send the network graph into trainer, and name of placeholder
-        gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, input_name=gen_pairnet.inputs)
+        gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, gen_pairnet.prediction, input_name=gen_pairnet.inputs)
 
         # generate targets through evaluating the prediction of the network
         targets = gen_pairnet_train.evaluate(ops=gen_pairnet.prediction, inputs=spk_pairs)
@@ -224,7 +224,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
         gen_tripnet = network.TripNet(kernel=kernel, n_input=spk_pairs.shape[1])
 
         # Send the network graph into trainer, and name of placeholder
-        gen_tripnet_train = trainer.Trainer(gen_tripnet.prediction, input_name=gen_tripnet.inputs)
+        gen_tripnet_train = trainer.Trainer(gen_tripnet.prediction, gen_tripnet.prediction,input_name=gen_tripnet.inputs)
 
         # generate targets through evaluating the prediction of the network
         targets = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs)
