@@ -129,8 +129,8 @@ class PairNet(object):
 
         return initializer
     
-    def normliazation(self, kernel_raw):
-        return (kernel_raw/tf.norm(kernel_raw, order=2, keep_dims=True)
+    def l2_loss_unit(self, kernel_raw):
+        return tf.square(tf.norm(kernel_raw, ord=2) - 1)
 # ==============================================================================================
 
 
@@ -193,9 +193,9 @@ class TripNet(PairNet):
                 self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
 
-            self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.normliazation(self.kernel_pre))
-            self.y_post = self.conv_1d(data=self.x_post, kernel=self.normliazation(self.kernel_post))
-            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.normliazation(self.kernel_post_post))
+            self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
+            self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
+            self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)
 
             self.pair_term1 = tf.reduce_sum(tf.multiply(self.y_pre, tf.expand_dims(self.x_post, axis=2)), 1)
             self.pair_term2 = tf.reduce_sum(tf.multiply(self.y_post, tf.expand_dims(self.x_pre, axis=2)), 1)
@@ -207,8 +207,9 @@ class TripNet(PairNet):
             self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1))
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
+            self.l2_loss = (self.l2_loss_unit(self.kernel_pre)+self.l2_loss_unit(self.kernel_post)+self.l2_loss_unit(self.kernel_post_post))/3
 
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.loss = self.mse + self.regularization()
+            self.loss = self.mse + self.l2_loss * self.alpha_l2 
