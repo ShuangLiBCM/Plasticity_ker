@@ -5,6 +5,9 @@
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from modelval.kernel import KernelGen
+from modelval.trainer import Trainer
 import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
@@ -140,94 +143,143 @@ class ModelSelection(dj.Computed):
     def _make_tuples(self, key):
         print('Populating', key, flush=True)
 
-        # Fetch data from the server and save temporally locally
+        # Fetch parameter from the server and save temporally locally, and generate spike trains and targets
         if self.tmppath is None:
             self.tmppath = tempfile.mkdtemp()
 
+            # Copy Gerstner's model parameter to local path
+            copyfile('/data/Gerstner_trip_para_df', join(self.tmppath, 'Gerstner_trip_para_df'))
+            trip_para = pd.read_pickle(join(self.tmppath, 'Gerstner_trip_para_df'))
+            # Reorder columns to match parameter of the model
+            trip_para = trip_para[['A2_+', 'A3_-', 'A2_-', 'A3_+', 'Tau_+', 'Tau_x', 'Tau_-', 'Tau_y']]
+
+            # Copy literature data information to local path
+            copyfile('/src/Plasticity_Ker/data/kernel_training_data_auto.csv',
+                     join(self.tmppath, '/src/Plasticity_Ker/data/kernel_training_data_auto.csv'))
+            data = pd.read_csv(join(self.tmppath, '/src/Plasticity_Ker/data/kernel_training_data_auto.csv'))
+            data['train_len'] = data['ptl_occ'] / data['ptl_freq']
+            data.drop(data[data['ptl_occ'] == 50].index, axis=0, inplace=True)
+
             data_name = (Dataset() & key).fetch1['dataset_name']
+            net_name = (Network() & key).fetch1['network_name']
 
             # Save the target final temporally in the local path
             if data_name == 'STDP':
-                copyfile('/data/STDP_spike_pairs.npy', join(self.tmppath, 'STDP_spike_pairs.npy'))
+                para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
+                ker_test = KernelGen()
+                ker_test.trip_model_ker(para)
+
+                ptl_list = [1]
+                data_select = data[data['ptl_idx'].isin(ptl_list)]
+
+                # Insert values for STDP
+                dt = np.arange(-100, 100, 2)
+                for i in range(len(dt)):
+                    new_try1 = data[data['ptl_idx'] == 1].iloc[0]
+                    new_try1['dt1'] = dt[i]
+                    data_select = data_select.append(new_try1, ignore_index=True)
+
+                spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
+                spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
+                                               kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
+                                               net_type='triplet')
+
             elif data_name == 'Hippocampus':
-                copyfile('/data/Hippo_spike_pairs', join(self.tmppath, 'Hippo_spike_pairs'))
+                para = trip_para.loc[('Hippo_AlltoAll', 'Full'), :]
+                ker_test = KernelGen()
+                ker_test.trip_model_ker(para)
+
+                # Generate data
+                ptl_list = [1, 2, 3, 4]
+                data_select = data[data['ptl_idx'].isin(ptl_list)]
+
+                # Insert values for STDP
+                dt = np.arange(-100, 100, 2)
+                for i in range(len(dt)):
+                    new_try1 = data[data['ptl_idx'] == 1].iloc[0]
+                    new_try1['dt1'] = dt[i]
+                    data_select = data_select.append(new_try1, ignore_index=True)
+
+                # Insert values for Quadruplet protocol
+                for i in range(len(dt)):
+                    if np.abs(dt[i]) > 10:
+                        new_try2 = data[data['ptl_idx'] == 3].iloc[0]
+                        new_try2['dt2'] = dt[i]
+                        data_select = data_select.append(new_try2, ignore_index=True)
+
+                spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
+                spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
+                                               kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
+                                               net_type='triplet')
+
             elif data_name == 'VisualCortex':
-                copyfile('/data/Visual_cortex_spike_pairs.npy', join(self.tmppath, 'Visual_cortex_spike_pairs.npy'))
+                para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
+                ker_test = KernelGen()
+                ker_test.trip_model_ker(para)
+
+                # Generate data
+                ptl_list = [1, 5, 6, 7, 8]
+                data_select = data[data['ptl_idx'].isin(ptl_list)]
+
+                # Insert values for STDP
+                dt = np.arange(-100, 100, 2)
+                for i in range(len(dt)):
+                    new_try1 = data_select[data_select['ptl_idx'] == 1].iloc[0]
+                    new_try1['dt1'] = dt[i]
+                    data_select = data_select.append(new_try1, ignore_index=True)
+
+                spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
+                spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
+                                               kernel_scale=ker_test.kernel_scale, aug_times=[5, 20, 20, 20, 20],
+                                               net_type='triplet')
             else:
                 print('Wrong data name!!')
                 return
-        # Generate the target with the designated kernel
-        data_input = np.load(join(self.tmppath, 'data_input_1k.npy'))
-        target_final = np.load(join(self.tmppath, 'target_final_1k.npy'))
-        kernel_pre = np.load(join(self.tmppath, 'pre_kernel_1k.npy'))
-        kernel_post = np.load(join(self.tmppath, 'post_kernel_1k.npy'))
-        # Build the model
 
-        dataset = Dataset(inputs=data_input, targets=target_final)
-        train_inputs, train_targets = dataset.train_set()
-        # validation_inputs, validation_targets = dataset.train_set()
+        # Build the network
+        ground_truth_init = 0
 
-        net = KernelNet(n_input=train_inputs.shape[1], kernel_pre=kernel_pre,
-                        kernel_post=kernel_post, len_k=51, if_1k=True,
-                        if_rand_ini=key['random_start'], if_rand_bias=key['random_bias'],
-                        rand_seed=[key['seed'], key['seed'] + 1, key['constant_seed']])
-
-        def ping(trainer, step, global_step):
-            """
-            Function to perioidically ping the database to keep the connection alive.
-            :param step: current step. Pings every 10,000 steps
-            """
-            if step % 10000 == 0:
-                dj.conn().is_connected
-
-        trainer = Trainer(net.cost, net.input_, net.target_, net.is_training_,
-                          optimizer_config={'learning_rate': net.l_rate_}, log_dir=tempfile.mkdtemp())
-
-        # Learning rate
-        lr = (LearningRate() & key).fetch1['learning_rate']
-
-        # Strength of L1 normalization
         alpha1 = (L1RegConstant() & key).fetch1['alpha_l1']
         alpha2 = (L2RegConstant() & key).fetch1['alpha_l2']
 
-        trainer.min_total_loss = trainer.evaluate(dataset.validation_inputs, dataset.validation_targets,
-                                                  feed_dict={net.l_rate_: lr, net.alpha1_: alpha1, net.alpha2_: alpha2})
+        reg_scale = (alpha1, alpha2)
+        toy_data_net = network.TripNet(kernel=ker_test, ground_truth_init=ground_truth_init,
+                                        kernel_scale=ker_test.kernel_scale, reg_scale=reg_scale, n_input=spk_pairs.shape[1])
 
-        trainer.save_best()
-        # Epochs of training
-        for i in range(key['iterations']):
-            trainer.train(dataset, batch_size=128, max_steps=-1, early_stopping_steps=20, save_freq=-1,
-                          feed_dict={net.l_rate_: lr, net.alpha1_: alpha1, net.alpha2_: alpha2}, test_freq=0,
-                          callback_fn=ping)
-            lr /= 3
+        # Create the trainer
+        save_dir = join('/src/Plasticity_Ker/model', data_name, '/', net_name)
+        toy_net_trainer = Trainer(toy_data_net.mse, toy_data_net.loss, input_name=toy_data_net.inputs,
+                                           target_name=toy_data_net.target, save_dir=save_dir,
+                                           optimizer_config={'learning_rate': toy_data_net.lr})
 
-        wc_pre = np.hstack(trainer.evaluate(ops=net.wc_pre))
-        wc_post = np.hstack(trainer.evaluate(ops=net.wc_post))
-        bias = trainer.evaluate(ops=net.bias)
+        # Obtain the training and validation data
 
-        mse = trainer.evaluate(dataset.validation_inputs, dataset.validation_targets, ops=net.mse,
-                               feed_dict={net.l_rate_: lr, net.alpha1_: alpha1, net.alpha2_: alpha2})
+        X_train, X_vali, y_train, y_vali = train_test_split(spk_pairs, targets, test_size=0.1)
+        train_data = dataset.Dataset(X_train, y_train)
+        vali_data = dataset.Dataset(X_vali, y_vali)
 
-        cost = trainer.evaluate(dataset.validation_inputs, dataset.validation_targets, ops=net.cost,
-                                feed_dict={net.l_rate_: lr, net.alpha1_: alpha1, net.alpha2_: alpha2})
+        # Learn the kernel from random initialization
+        learning_rate = (LearningRate() & key).fetch1['learning_rate']
+        iterations = (Loops() & key).fetch1['iterations']
+        min_error = -1
+        for i in range(iterations):
+            toy_net_trainer.train(train_data, vali_data, batch_size=128, min_error=min_error,
+                                   feed_dict={toy_data_net.lr: learning_rate})
+            learning_rate = learning_rate / 3
+
+        kernel_pre = toy_net_trainer.evaluate(ops=toy_data_net.kernel_pre)
+        kernel_post = toy_net_trainer.evaluate(ops=toy_data_net.kernel_post)
+        kernel_post_post = toy_net_trainer.evaluate(ops=toy_data_net.kernel_post_post)
+        fc_w = toy_net_trainer.evaluate(ops=toy_data_net.fc_w)
+
+        mse = toy_net_trainer.evaluate(ops=toy_data_net.mse, feed_dict={toy_data_net.lr: learning_rate})
+
+        cost = toy_net_trainer.evaluate(ops=toy_data_net.loss, feed_dict={toy_data_net.lr: learning_rate})
 
         key['val_error'] = mse
         key['val_loss'] = cost
-        key['pre_kernel'] = wc_pre[0]
-        key['post_kernel'] = wc_post[0]
-        key['bias'] = bias[0]
+        key['pre_kernel'] = kernel_pre
+        key['post_kernel'] = kernel_post
+        key['post_post_kernel'] = kernel_post_post
         self.insert1(key)
-# Generate kernel
-
-# Load data
-
-# Generate data of specific protocol (Train, targets)
-
-# Build the network
-
-# Create the trainer
-
-# Train the model
-
-# Save the model and best parameter
 
