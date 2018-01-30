@@ -40,7 +40,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=1, reg_scale=(0, 0), init_seed=0):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.array([1, 1]), reg_scale=(0, 0), init_seed=0):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -66,36 +66,92 @@ class PairNet(object):
         :param: n_input, length of input
         :return:
         """
+        # with self.graph.as_default():
+        #
+        #     self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
+        #     self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
+        #     self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
+        #     self.lr = tf.placeholder(tf.float32, name='learning_rate')
+        #
+        #     self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre), trainable=False,
+        #                                           name='const_pre_kernel')
+        #     if self.ground_truth_init:  # Not in training model
+        #         self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post * self.kernel_scale),
+        #                                            name='const_post_kernel')
+        #     else:
+        #         kernel_len = self.kernel.len_kernel
+        #         self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
+        #                                            initializer=self.random_init(self.init_seed), name='post_kernel')
+        #
+        #     self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
+        #
+        #     self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
+        #     self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
+        #
+        #     self.prediction = tf.reduce_sum(tf.multiply(self.y_pre, self.y_post), 1) + self.bias
+        #
+        #     self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
+        #
+        #     self.alpha_l1 = self.reg_scale[0]
+        #     self.alpha_l2 = self.reg_scale[1]
+        #
+        #     self.loss = self.mse + self.regularization()
         with self.graph.as_default():
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
             self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
             self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
+            kernel_len = self.kernel.len_kernel
 
-            self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre), trainable=False,
+            # Apply mask to train only half of the kernel
+            mask = np.zeros(shape=[kernel_len, 1])
+            mask2 = np.zeros(shape=[kernel_len, 1])
+            mask[:int((kernel_len - 1) / 2), 0] = 1
+            mask2[:int((kernel_len - 1) / 2) + 1, 0] = 1
+
+            if self.ground_truth_init:  # Not in training mode
+                self.kernel_pre = tf.get_variable(shape=self.kernel_pre_const.shape, dtype=tf.float32,
+                                                  initializer=tf.constant_initializer(self.kernel_pre_const),
                                                   name='const_pre_kernel')
-            if self.ground_truth_init:  # Not in training model
-                self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post * self.kernel_scale),
+                self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
+                self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32,
+                                                   initializer=tf.constant_initializer(self.kernel_post_const),
                                                    name='const_post_kernel')
+                self.kernel_post = tf.multiply(self.kernel_post, mask)
+                self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32,
+                                            initializer=tf.constant_initializer(self.kernel_scale),
+                                            name='const_fully_connect_weights')
             else:
-                kernel_len = self.kernel.len_kernel
+                self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
+                                                  initializer=self.random_init(self.init_seed[0]), name='pre_kernel')
+                self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
                 self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
-                                                   initializer=self.random_init(self.init_seed), name='post_kernel')
+                                                   initializer=self.random_init(self.init_seed[1]), name='post_kernel')
+                self.kernel_post = tf.multiply(self.kernel_post, mask)
 
-            self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
+                self.fc_w = tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
+                                            initializer=self.random_init(self.init_seed[3]),
+                                            name='fully_connect_weights')
 
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
 
-            self.prediction = tf.reduce_sum(tf.multiply(self.y_pre, self.y_post), 1) + self.bias
+            self.pair_term1 = tf.reduce_sum(tf.multiply(self.y_pre, tf.expand_dims(self.x_post, axis=2)), 1)
+            self.pair_term2 = tf.reduce_sum(tf.multiply(self.y_post, tf.expand_dims(self.x_pre, axis=2)), 1)
+
+            self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2], axis=1)
+
+            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1))
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
+            self.l2_loss = (self.l2_loss_unit(self.kernel_pre) + self.l2_loss_unit(
+                self.kernel_post)) / 2
 
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.loss = self.mse + self.regularization()
+            self.loss = self.mse + self.alpha_l2 * self.l2_loss
 
     def conv_1d(self, data=None, kernel=None):
         """
