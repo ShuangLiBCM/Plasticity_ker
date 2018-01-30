@@ -40,7 +40,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.array([1, 1]), reg_scale=(0, 0), init_seed=0):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.array([1, 1]), reg_scale=(0, 0), init_seed=(0, 1, 2)):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -131,7 +131,7 @@ class PairNet(object):
                 self.kernel_post = tf.multiply(self.kernel_post, mask)
 
                 self.fc_w = tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
-                                            initializer=self.random_init(self.init_seed[3]),
+                                            initializer=self.random_init(self.init_seed[2]),
                                             name='fully_connect_weights')
 
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
