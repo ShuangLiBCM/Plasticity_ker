@@ -161,7 +161,8 @@ class TripNet(PairNet):
             self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
             self.lr = tf.placeholder(tf.float32, name='learning_rate')
             kernel_len = self.kernel.len_kernel
-
+            
+            # Apply mask to train only half of the kernel 
             mask = np.zeros(shape=[kernel_len, 1])
             mask2 = np.zeros(shape=[kernel_len, 1])
             mask[:int((kernel_len-1)/2),0]=1
@@ -176,9 +177,9 @@ class TripNet(PairNet):
                 self.kernel_post = tf.multiply(self.kernel_post, mask)
                 self.kernel_post_post = tf.get_variable(shape=self.kernel_post_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_post_const),
                                                    name='const_post_post_kernel')
+                self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
                 self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_scale),
                                                    name='const_fully_connect_weights')
-                self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
             else:
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
                                                   initializer=self.random_init(self.init_seed[0]), name='pre_kernel')
@@ -212,4 +213,4 @@ class TripNet(PairNet):
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.loss = self.mse + self.l2_loss * self.alpha_l2 
+            self.loss = self.mse + self.alpha_l2 * self.l2_loss
