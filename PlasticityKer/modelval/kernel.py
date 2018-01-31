@@ -123,7 +123,7 @@ class KernelGen(object):
         ker_pre_norm = np.linalg.norm(self.kernel_pre, ord=2)
         self.kernel_pre = self.kernel_pre / ker_pre_norm
         self.kernel_post = self.uni_exp_ker(side='left', tau=tau_post_pre, scale=1)
-        ker_post_norm = np.linalg.norm(ker_test.kernel_post, ord=2)
+        ker_post_norm = np.linalg.norm(self.kernel_post, ord=2)
         self.kernel_post = self.kernel_post / ker_post_norm
         self.kernel_post_post = self.uni_exp_ker(side='left', tau=tau_post_post, scale=1, shift=-1)
         ker_post_post_norm = np.linalg.norm(self.kernel_post_post, ord=2)

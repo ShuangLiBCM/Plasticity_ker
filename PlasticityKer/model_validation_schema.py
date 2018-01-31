@@ -17,6 +17,7 @@ import datajoint as dj
 import tempfile
 from shutil import copyfile
 from os.path import join
+import pdb
 
 schema = dj.schema('shuang_model_validation_schema', locals())
 
@@ -117,7 +118,7 @@ class Seed(dj.Lookup):
     seed                      : int # random seed
     ---
     """
-    contents = [(0, 0), (1, 723), (1, 607)]
+    contents = [(0, 0)]
 
 @schema
 class ModelSelection(dj.Computed):
@@ -149,16 +150,12 @@ class ModelSelection(dj.Computed):
 
             # Copy Gerstner's model parameter to local path
             copyfile('/data/Gerstner_trip_para_df', join(self.tmppath, 'Gerstner_trip_para_df'))
-            copyfile('/src/Plasticity_Ker/data/kernel_training_data_auto.csv',
-                     join(self.tmppath, 'kernel_training_data_auto.csv'))
 
         trip_para = pd.read_pickle(join(self.tmppath, 'Gerstner_trip_para_df'))
         # Reorder columns to match parameter of the model
         trip_para = trip_para[['A2_+', 'A3_-', 'A2_-', 'A3_+', 'Tau_+', 'Tau_x', 'Tau_-', 'Tau_y']]
 
-        # Copy literature data information to local path
-
-        data = pd.read_csv(join(self.tmppath, 'kernel_training_data_auto.csv'))
+        data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
         data['train_len'] = data['ptl_occ'] / data['ptl_freq']
         data.drop(data[data['ptl_occ'] == 50].index, axis=0, inplace=True)
 
@@ -249,7 +246,7 @@ class ModelSelection(dj.Computed):
                                         kernel_scale=ker_test.kernel_scale, reg_scale=reg_scale, n_input=spk_pairs.shape[1])
 
         # Create the trainer
-        save_dir = join('/src/Plasticity_Ker/model', data_name, '/', net_name)
+        save_dir = '/'.join(('/src/Plasticity_Ker/model', data_name, net_name))
         toy_net_trainer = Trainer(toy_data_net.mse, toy_data_net.loss, input_name=toy_data_net.inputs,
                                            target_name=toy_data_net.target, save_dir=save_dir,
                                            optimizer_config={'learning_rate': toy_data_net.lr})
