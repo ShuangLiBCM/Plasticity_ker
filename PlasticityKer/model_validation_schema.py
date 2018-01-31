@@ -149,92 +149,94 @@ class ModelSelection(dj.Computed):
 
             # Copy Gerstner's model parameter to local path
             copyfile('/data/Gerstner_trip_para_df', join(self.tmppath, 'Gerstner_trip_para_df'))
-            trip_para = pd.read_pickle(join(self.tmppath, 'Gerstner_trip_para_df'))
-            # Reorder columns to match parameter of the model
-            trip_para = trip_para[['A2_+', 'A3_-', 'A2_-', 'A3_+', 'Tau_+', 'Tau_x', 'Tau_-', 'Tau_y']]
-
-            # Copy literature data information to local path
             copyfile('/src/Plasticity_Ker/data/kernel_training_data_auto.csv',
                      join(self.tmppath, 'kernel_training_data_auto.csv'))
-            data = pd.read_csv(join(self.tmppath, 'kernel_training_data_auto.csv'))
-            data['train_len'] = data['ptl_occ'] / data['ptl_freq']
-            data.drop(data[data['ptl_occ'] == 50].index, axis=0, inplace=True)
 
-            data_name = (Dataset() & key).fetch1['dataset_name']
-            net_name = (Network() & key).fetch1['network_name']
+        trip_para = pd.read_pickle(join(self.tmppath, 'Gerstner_trip_para_df'))
+        # Reorder columns to match parameter of the model
+        trip_para = trip_para[['A2_+', 'A3_-', 'A2_-', 'A3_+', 'Tau_+', 'Tau_x', 'Tau_-', 'Tau_y']]
 
-            # Save the target final temporally in the local path
-            if data_name == 'STDP':
-                para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
-                ker_test = KernelGen()
-                ker_test.trip_model_ker(para)
+        # Copy literature data information to local path
 
-                ptl_list = [1]
-                data_select = data[data['ptl_idx'].isin(ptl_list)]
+        data = pd.read_csv(join(self.tmppath, 'kernel_training_data_auto.csv'))
+        data['train_len'] = data['ptl_occ'] / data['ptl_freq']
+        data.drop(data[data['ptl_occ'] == 50].index, axis=0, inplace=True)
 
-                # Insert values for STDP
-                dt = np.arange(-100, 100, 2)
-                for i in range(len(dt)):
-                    new_try1 = data[data['ptl_idx'] == 1].iloc[0]
-                    new_try1['dt1'] = dt[i]
-                    data_select = data_select.append(new_try1, ignore_index=True)
+        data_name = (Dataset() & key).fetch1['dataset_name']
+        net_name = (Network() & key).fetch1['network_name']
 
-                spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
-                spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
-                                               kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
-                                               net_type='triplet')
+        # Save the target final temporally in the local path
+        if data_name == 'STDP':
+            para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
+            ker_test = KernelGen()
+            ker_test.trip_model_ker(para)
 
-            elif data_name == 'Hippocampus':
-                para = trip_para.loc[('Hippo_AlltoAll', 'Full'), :]
-                ker_test = KernelGen()
-                ker_test.trip_model_ker(para)
+            ptl_list = [1]
+            data_select = data[data['ptl_idx'].isin(ptl_list)]
 
-                # Generate data
-                ptl_list = [1, 2, 3, 4]
-                data_select = data[data['ptl_idx'].isin(ptl_list)]
+            # Insert values for STDP
+            dt = np.arange(-100, 100, 2)
+            for i in range(len(dt)):
+                new_try1 = data[data['ptl_idx'] == 1].iloc[0]
+                new_try1['dt1'] = dt[i]
+                data_select = data_select.append(new_try1, ignore_index=True)
 
-                # Insert values for STDP
-                dt = np.arange(-100, 100, 2)
-                for i in range(len(dt)):
-                    new_try1 = data[data['ptl_idx'] == 1].iloc[0]
-                    new_try1['dt1'] = dt[i]
-                    data_select = data_select.append(new_try1, ignore_index=True)
+            spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
+            spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
+                                           kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
+                                           net_type='triplet')
 
-                # Insert values for Quadruplet protocol
-                for i in range(len(dt)):
-                    if np.abs(dt[i]) > 10:
-                        new_try2 = data[data['ptl_idx'] == 3].iloc[0]
-                        new_try2['dt2'] = dt[i]
-                        data_select = data_select.append(new_try2, ignore_index=True)
+        elif data_name == 'Hippocampus':
+            para = trip_para.loc[('Hippo_AlltoAll', 'Full'), :]
+            ker_test = KernelGen()
+            ker_test.trip_model_ker(para)
 
-                spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
-                spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
-                                               kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
-                                               net_type='triplet')
+            # Generate data
+            ptl_list = [1, 2, 3, 4]
+            data_select = data[data['ptl_idx'].isin(ptl_list)]
 
-            elif data_name == 'VisualCortex':
-                para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
-                ker_test = KernelGen()
-                ker_test.trip_model_ker(para)
+            # Insert values for STDP
+            dt = np.arange(-100, 100, 2)
+            for i in range(len(dt)):
+                new_try1 = data[data['ptl_idx'] == 1].iloc[0]
+                new_try1['dt1'] = dt[i]
+                data_select = data_select.append(new_try1, ignore_index=True)
 
-                # Generate data
-                ptl_list = [1, 5, 6, 7, 8]
-                data_select = data[data['ptl_idx'].isin(ptl_list)]
+            # Insert values for Quadruplet protocol
+            for i in range(len(dt)):
+                if np.abs(dt[i]) > 10:
+                    new_try2 = data[data['ptl_idx'] == 3].iloc[0]
+                    new_try2['dt2'] = dt[i]
+                    data_select = data_select.append(new_try2, ignore_index=True)
 
-                # Insert values for STDP
-                dt = np.arange(-100, 100, 2)
-                for i in range(len(dt)):
-                    new_try1 = data_select[data_select['ptl_idx'] == 1].iloc[0]
-                    new_try1['dt1'] = dt[i]
-                    data_select = data_select.append(new_try1, ignore_index=True)
+            spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
+            spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
+                                           kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
+                                           net_type='triplet')
 
-                spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
-                spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
-                                               kernel_scale=ker_test.kernel_scale, aug_times=[5, 20, 20, 20, 20],
-                                               net_type='triplet')
-            else:
-                print('Wrong data name!!')
-                return
+        elif data_name == 'VisualCortex':
+            para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
+            ker_test = KernelGen()
+            ker_test.trip_model_ker(para)
+
+            # Generate data
+            ptl_list = [1, 5, 6, 7, 8]
+            data_select = data[data['ptl_idx'].isin(ptl_list)]
+
+            # Insert values for STDP
+            dt = np.arange(-100, 100, 2)
+            for i in range(len(dt)):
+                new_try1 = data_select[data_select['ptl_idx'] == 1].iloc[0]
+                new_try1['dt1'] = dt[i]
+                data_select = data_select.append(new_try1, ignore_index=True)
+
+            spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
+            spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
+                                           kernel_scale=ker_test.kernel_scale, aug_times=[5, 20, 20, 20, 20],
+                                           net_type='triplet')
+        else:
+            print('Wrong data name!!')
+            return
 
         # Build the network
         ground_truth_init = 0
