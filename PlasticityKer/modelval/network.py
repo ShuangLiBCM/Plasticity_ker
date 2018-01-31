@@ -40,7 +40,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.array([1, 1]), reg_scale=(0, 0), init_seed=(0, 1, 2)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(0, 0), init_seed=(0, 1, 2)):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -54,7 +54,7 @@ class PairNet(object):
         self.kernel_pre_const = kernel.kernel_pre
         self.kernel_post_const = kernel.kernel_post
         self.kernel_post_post_const = kernel.kernel_post_post
-        self.kernel_scale = kernel_scale
+        self.kernel_scale = kernel.kernel_scale
         self.reg_scale = reg_scale
         self.ground_truth_init = ground_truth_init
         self.init_seed = init_seed
@@ -142,7 +142,7 @@ class PairNet(object):
 
             self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2], axis=1)
 
-            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1))
+            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w[:2], axis=1))
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
             self.l2_loss = (self.l2_loss_unit(self.kernel_pre) + self.l2_loss_unit(
@@ -193,8 +193,7 @@ class PairNet(object):
 class TripNet(PairNet):
 
     def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3, 1)), reg_scale=(0, 0), init_seed=(0, 1, 2, 3)):
-        super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init,
-                                      kernel_scale=kernel_scale, reg_scale=reg_scale, init_seed=init_seed)
+        super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init, reg_scale=reg_scale, init_seed=init_seed)
         """
         Create and build the PairNet
         :param kernel: Kernel object

@@ -33,7 +33,8 @@ class Network(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 'PairNet'), (1, 'TripNet')]
+        return [(0, 'pair')]
+    # return [(0, 'pair'), (0, 'triplet')]
 
 @schema
 class Dataset(dj.Lookup):
@@ -46,7 +47,8 @@ class Dataset(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0,'STDP'), (1, 'Hippocampus'), (2,'VisualCortex')]
+        return [(0,'STDP')]
+    # return [(0,'STDP'), (1, 'Hippocampus'), (2,'VisualCortex')]
 
 @schema
 class L1RegConstant(dj.Lookup):
@@ -75,7 +77,7 @@ class L2RegConstant(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 0.0)]
+        return [(0, 1.0)]
 
 # @schema
 # class InitBias(dj.Lookup):
@@ -139,6 +141,7 @@ class ModelSelection(dj.Computed):
     post_post_kernel  : longblob    # postsynaptic kernel for higher order interaction
     val_error         : float       # mse on validation set
     val_loss          : float       # total loss on validation set
+    scale             : float       # total loss on validation set
     """
 
     def _make_tuples(self, key):
@@ -164,7 +167,7 @@ class ModelSelection(dj.Computed):
 
         # Save the target final temporally in the local path
         if data_name == 'STDP':
-            para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
+            para = trip_para.loc[('Hippo_AlltoAll', 'Full'), :]
             ker_test = KernelGen()
             ker_test.trip_model_ker(para)
 
@@ -180,8 +183,8 @@ class ModelSelection(dj.Computed):
 
             spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
             spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
-                                           kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
-                                           net_type='triplet')
+                                           aug_times=[10, 10, 10, 10],
+                                           net_type=net_name)
 
         elif data_name == 'Hippocampus':
             para = trip_para.loc[('Hippo_AlltoAll', 'Full'), :]
@@ -208,8 +211,8 @@ class ModelSelection(dj.Computed):
 
             spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
             spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
-                                           kernel_scale=ker_test.kernel_scale, aug_times=[10, 10, 10, 10],
-                                           net_type='triplet')
+                                           aug_times=[10, 10, 10, 10],
+                                           net_type=net_name)
 
         elif data_name == 'VisualCortex':
             para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
@@ -229,8 +232,8 @@ class ModelSelection(dj.Computed):
 
             spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
             spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
-                                           kernel_scale=ker_test.kernel_scale, aug_times=[5, 20, 20, 20, 20],
-                                           net_type='triplet')
+                                           aug_times=[5, 20, 20, 20, 20],
+                                           net_type=net_name)
         else:
             print('Wrong data name!!')
             return
@@ -240,11 +243,17 @@ class ModelSelection(dj.Computed):
 
         alpha1 = (L1RegConstant() & key).fetch1['alpha_l1']
         alpha2 = (L2RegConstant() & key).fetch1['alpha_l2']
-
         reg_scale = (alpha1, alpha2)
-        toy_data_net = network.TripNet(kernel=ker_test, ground_truth_init=ground_truth_init,
-                                        kernel_scale=ker_test.kernel_scale, reg_scale=reg_scale, n_input=spk_pairs.shape[1])
 
+
+        if net_name == 'triplet':
+            toy_data_net = network.TripNet(kernel=ker_test, ground_truth_init=ground_truth_init, reg_scale=reg_scale, n_input=spk_pairs.shape[1])
+        elif net_name == 'pair':
+            toy_data_net = network.PairNet(kernel=ker_test, ground_truth_init=ground_truth_init, reg_scale=reg_scale, n_input=spk_pairs.shape[1])
+        else:
+            print('Wrong network!!!')
+            return
+                  
         # Create the trainer
         save_dir = '/'.join(('/src/Plasticity_Ker/model', data_name, net_name))
         toy_net_trainer = Trainer(toy_data_net.mse, toy_data_net.loss, input_name=toy_data_net.inputs,
@@ -277,6 +286,7 @@ class ModelSelection(dj.Computed):
 
         key['val_error'] = mse
         key['val_loss'] = cost
+        key['scale'] = fc_w
         key['pre_kernel'] = kernel_pre
         key['post_kernel'] = kernel_post
         key['post_post_kernel'] = kernel_post_post

@@ -182,7 +182,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
     return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, kernel_scale=None, spk_len=None, aug_times=None, net_type='pair'):
+def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, aug_times=None, net_type='pair'):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     ------------------------------
@@ -221,7 +221,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, kernel_scale=
         targets = gen_pairnet_train.evaluate(ops=gen_pairnet.prediction, inputs=spk_pairs)
 
     elif net_type == 'triplet':
-        gen_tripnet = network.TripNet(kernel=kernel, n_input=spk_pairs.shape[1], kernel_scale=kernel_scale)
+        gen_tripnet = network.TripNet(kernel=kernel, n_input=spk_pairs.shape[1])
 
         # Send the network graph into trainer, and name of placeholder
         gen_tripnet_train = trainer.Trainer(gen_tripnet.prediction, gen_tripnet.prediction,
