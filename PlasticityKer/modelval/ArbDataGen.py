@@ -182,7 +182,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
     return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, aug_times=None, net_type='pair'):
+def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None, net_type='pair'):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     ------------------------------
@@ -195,6 +195,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
     """
     if spk_pairs is None:
         spk_pairs = []
+        target_gen = []
 
         if spk_len is None:
             spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
@@ -207,30 +208,34 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
                 for _ in range(aug_times[i]):
                     _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
                     spk_pairs.append(spk_pair)
+                    target_gen.append(targets[j])
 
         # Generate the spike data
         spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
     
     # Get the network used to generate prediction
-    if net_type == 'pair':
-        gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1])
-        # Send the network graph into trainer, and name of placeholder
-        gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, gen_pairnet.prediction, input_name=gen_pairnet.inputs)
+    if targets is None:
+        if net_type == 'pair':
+            gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1])
+            # Send the network graph into trainer, and name of placeholder
+            gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, gen_pairnet.prediction, input_name=gen_pairnet.inputs)
 
-        # generate targets through evaluating the prediction of the network
-        targets = gen_pairnet_train.evaluate(ops=gen_pairnet.prediction, inputs=spk_pairs)
+            # generate targets through evaluating the prediction of the network
+            targets = gen_pairnet_train.evaluate(ops=gen_pairnet.prediction, inputs=spk_pairs)
 
-    elif net_type == 'triplet':
-        gen_tripnet = network.TripNet(kernel=kernel, n_input=spk_pairs.shape[1])
+        elif net_type == 'triplet':
+            gen_tripnet = network.TripNet(kernel=kernel, n_input=spk_pairs.shape[1])
 
-        # Send the network graph into trainer, and name of placeholder
-        gen_tripnet_train = trainer.Trainer(gen_tripnet.prediction, gen_tripnet.prediction,
-                                            input_name=gen_tripnet.inputs)
+            # Send the network graph into trainer, and name of placeholder
+            gen_tripnet_train = trainer.Trainer(gen_tripnet.prediction, gen_tripnet.prediction,
+                                                input_name=gen_tripnet.inputs)
 
-        # generate targets through evaluating the prediction of the network
-        targets = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs)
+            # generate targets through evaluating the prediction of the network
+            targets = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs)
+        else:
+            print('Wrong network!!')
     else:
-        print('Wrong network!!')
+        targets = np.vstack(target_gen)
 
 
     return spk_pairs, targets
