@@ -271,9 +271,9 @@ class ModelSelection(dj.Computed):
         kernel_post_post = toy_net_trainer.evaluate(ops=toy_data_net.kernel_post_post)
         fc_w = toy_net_trainer.evaluate(ops=toy_data_net.fc_w)
 
-        mse = toy_net_trainer.evaluate(ops=toy_data_net.mse, feed_dict={toy_data_net.lr: learning_rate})
+        mse = toy_net_trainer.evaluate(ops=toy_data_net.mse, inputs=X_vali, targets=y_vali, feed_dict={toy_data_net.lr: learning_rate})
 
-        cost = toy_net_trainer.evaluate(ops=toy_data_net.loss, feed_dict={toy_data_net.lr: learning_rate})
+        cost = toy_net_trainer.evaluate(ops=toy_data_net.loss, inputs=X_vali, targets=y_vali, feed_dict={toy_data_net.lr: learning_rate})
 
         key['val_error'] = mse
         key['val_loss'] = cost
