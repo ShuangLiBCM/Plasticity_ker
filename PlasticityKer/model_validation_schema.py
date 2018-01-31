@@ -33,7 +33,7 @@ class Network(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 'pair'), (0, 'triplet')]
+        return [(0, 'pair'), (1, 'triplet')]
 
 @schema
 class Dataset(dj.Lookup):
@@ -139,7 +139,7 @@ class ModelSelection(dj.Computed):
     post_post_kernel  : longblob    # postsynaptic kernel for higher order interaction
     val_error         : float       # mse on validation set
     val_loss          : float       # total loss on validation set
-    scale             : float       # total loss on validation set
+    scale             : longblob       # weight for output layer
     """
 
     def _make_tuples(self, key):
@@ -288,7 +288,7 @@ class ModelSelection(dj.Computed):
         mse = toy_net_trainer.evaluate(ops=toy_data_net.mse, inputs=X_vali, targets=y_vali, feed_dict={toy_data_net.lr: learning_rate})
 
         cost = toy_net_trainer.evaluate(ops=toy_data_net.loss, inputs=X_vali, targets=y_vali, feed_dict={toy_data_net.lr: learning_rate})
-
+        
         key['val_error'] = mse
         key['val_loss'] = cost
         key['scale'] = fc_w
