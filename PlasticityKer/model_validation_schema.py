@@ -27,12 +27,12 @@ class Network(dj.Lookup):
     # Type of network to validate
     network_id          : smallint # l1 regularization id
     ---
-    network_name       : string # name of the network
+    network_name       : varchar(100) # name of the network
     """
 
     @property
     def contents(self):
-        return ['PairNet', 'TripNet']
+        return [(0, 'PairNet'), (1, 'TripNet')]
 
 @schema
 class Dataset(dj.Lookup):
@@ -40,12 +40,12 @@ class Dataset(dj.Lookup):
     # Type of spike train data to use for performing model validation
     dataset_id          : smallint # l1 regularization id
     ---
-    dataset_name      : string # name of the dataset
+    dataset_name      : varchar(100) # name of the dataset
     """
 
     @property
     def contents(self):
-        return ['STDP', 'Hippocampus', 'VisualCortex']
+        return [(0,'STDP'), (1, 'Hippocampus'), (2,'VisualCortex')]
 
 @schema
 class L1RegConstant(dj.Lookup):
@@ -59,7 +59,7 @@ class L1RegConstant(dj.Lookup):
 
     @property
     def contents(self):
-        return [0]
+        return [(0, 0.0)]
 
 
 @schema
@@ -74,7 +74,7 @@ class L2RegConstant(dj.Lookup):
 
     @property
     def contents(self):
-        return [0]
+        return [(0, 0.0)]
 
 # @schema
 # class InitBias(dj.Lookup):
@@ -155,8 +155,8 @@ class ModelSelection(dj.Computed):
 
             # Copy literature data information to local path
             copyfile('/src/Plasticity_Ker/data/kernel_training_data_auto.csv',
-                     join(self.tmppath, '/src/Plasticity_Ker/data/kernel_training_data_auto.csv'))
-            data = pd.read_csv(join(self.tmppath, '/src/Plasticity_Ker/data/kernel_training_data_auto.csv'))
+                     join(self.tmppath, 'kernel_training_data_auto.csv'))
+            data = pd.read_csv(join(self.tmppath, 'kernel_training_data_auto.csv'))
             data['train_len'] = data['ptl_occ'] / data['ptl_freq']
             data.drop(data[data['ptl_occ'] == 50].index, axis=0, inplace=True)
 
