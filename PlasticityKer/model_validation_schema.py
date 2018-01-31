@@ -33,8 +33,7 @@ class Network(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 'pair')]
-    # return [(0, 'pair'), (0, 'triplet')]
+        return [(0, 'pair'), (0, 'triplet')]
 
 @schema
 class Dataset(dj.Lookup):
@@ -47,8 +46,7 @@ class Dataset(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0,'STDP')]
-    # return [(0,'STDP'), (1, 'Hippocampus'), (2,'VisualCortex')]
+        return [(0,'STDP'), (1, 'Hippocampus'), (2,'VisualCortex')]
 
 @schema
 class L1RegConstant(dj.Lookup):
@@ -274,12 +272,19 @@ class ModelSelection(dj.Computed):
             toy_net_trainer.train(train_data, vali_data, batch_size=128, min_error=min_error,
                                    feed_dict={toy_data_net.lr: learning_rate})
             learning_rate = learning_rate / 3
-
+            
         kernel_pre = toy_net_trainer.evaluate(ops=toy_data_net.kernel_pre)
         kernel_post = toy_net_trainer.evaluate(ops=toy_data_net.kernel_post)
-        kernel_post_post = toy_net_trainer.evaluate(ops=toy_data_net.kernel_post_post)
         fc_w = toy_net_trainer.evaluate(ops=toy_data_net.fc_w)
-
+        
+        if net_name == 'triplet':
+            kernel_post_post = toy_net_trainer.evaluate(ops=toy_data_net.kernel_post_post)
+        elif net_name == 'pair':
+            kernel_post_post = np.zeros((1,1))
+        else:
+            print('Wrong network!!!')
+            return
+        
         mse = toy_net_trainer.evaluate(ops=toy_data_net.mse, inputs=X_vali, targets=y_vali, feed_dict={toy_data_net.lr: learning_rate})
 
         cost = toy_net_trainer.evaluate(ops=toy_data_net.loss, inputs=X_vali, targets=y_vali, feed_dict={toy_data_net.lr: learning_rate})
