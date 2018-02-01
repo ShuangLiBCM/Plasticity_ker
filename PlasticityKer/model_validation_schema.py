@@ -167,7 +167,7 @@ class ModelSelection(dj.Computed):
         if data_name == 'STDP':
             para = trip_para.loc[('Hippo_AlltoAll', 'Full'), :]
             ker_test = KernelGen()
-            ker_test.trip_model_ker(para)
+            ker_test.trip_model_ker(para, data_name='Hippocampus')
 
             ptl_list = [1]
             data_select = data[data['ptl_idx'].isin(ptl_list)]
@@ -181,13 +181,13 @@ class ModelSelection(dj.Computed):
 
             spk_len = int(data[data['ptl_idx'].isin(ptl_list)]['train_len'].max() * 1000 / ker_test.reso_kernel)
             spk_pairs, targets = arb_w_gen(df=data_select, ptl_list=ptl_list, spk_len=spk_len, kernel=ker_test,
-                                           aug_times=[10, 10, 10, 10],
+                                           aug_times=[20],
                                            net_type=net_name)
 
         elif data_name == 'Hippocampus':
             para = trip_para.loc[('Hippo_AlltoAll', 'Full'), :]
             ker_test = KernelGen()
-            ker_test.trip_model_ker(para)
+            ker_test.trip_model_ker(para, data_name='Hippocampus')
 
             # Generate data
             ptl_list = [1, 2, 3, 4]
@@ -215,7 +215,7 @@ class ModelSelection(dj.Computed):
         elif data_name == 'VisualCortex':
             para = trip_para.loc[('Visu_AlltoAll', 'Full'), :]
             ker_test = KernelGen()
-            ker_test.trip_model_ker(para)
+            ker_test.trip_model_ker(para, data_name='VisualCortex')
 
             # Generate data
             ptl_list = [1, 5, 6, 7, 8]

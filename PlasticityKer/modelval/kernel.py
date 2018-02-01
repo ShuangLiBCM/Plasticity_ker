@@ -107,7 +107,7 @@ class KernelGen(object):
 
         return self.kernel
 
-    def trip_model_ker(self, para):
+    def trip_model_ker(self, para, data_name='Hippocampus'):
         """
         Generate pre, post and postpost kernel based on Gerstner's paper
         :param para: parameter of the model
@@ -128,6 +128,13 @@ class KernelGen(object):
         self.kernel_post_post = self.uni_exp_ker(side='left', tau=tau_post_post, scale=1, shift=-1)
         ker_post_post_norm = np.linalg.norm(self.kernel_post_post, ord=2)
         self.kernel_post_post = self.kernel_post_post / ker_post_post_norm
-
-        self.kernel_scale = np.array([a[0] * ker_pre_norm, a[2] * ker_post_norm, a[3] * ker_post_post_norm])
+        
+        if data_name == 'Hippocampus':
+            self.kernel_scale = np.array([a[0] * ker_pre_norm, a[2] * ker_post_norm, a[3]/a[0] * ker_post_post_norm])
+        elif data_name == 'VisualCortex':
+            self.kernel_scale = np.array([a[0] * ker_pre_norm, a[2] * ker_post_norm, a[3] * ker_post_post_norm])
+        else:
+            print('Wrong data_name!!!')
+            return
+            
 
