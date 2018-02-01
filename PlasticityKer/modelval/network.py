@@ -40,7 +40,7 @@ class PairNet(object):
 
     """Build the architecture of pair based network"""
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(0, 0), init_seed=(0, 1, 2)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(0, 1), init_seed=(0, 1, 2)):
         """
         Create and build the PairNet
         :param kernel: Kernel object
@@ -192,7 +192,7 @@ class PairNet(object):
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3, 1)), reg_scale=(0, 0), init_seed=(0, 1, 2, 3)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3, 1)), reg_scale=(0, 1), init_seed=(0, 1, 2, 3)):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init, reg_scale=reg_scale, init_seed=init_seed)
         """
         Create and build the PairNet

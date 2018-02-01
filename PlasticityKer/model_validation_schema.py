@@ -267,11 +267,17 @@ class ModelSelection(dj.Computed):
         # Learn the kernel from random initialization
         learning_rate = (LearningRate() & key).fetch1['learning_rate']
         iterations = (Loops() & key).fetch1['iterations']
-        min_error = -1
-        for i in range(iterations):
+        min_error = 1e-14
+        mse_temp = 1
+        max_iteration = 20
+        iter_count = 0
+        while (mse_temp > min_error)&(iter_count < max_iteration):
             toy_net_trainer.train(train_data, vali_data, batch_size=128, min_error=min_error,
                                    feed_dict={toy_data_net.lr: learning_rate})
+            mse_temp = toy_net_trainer.evaluate(ops=toy_data_net.mse, inputs=X_vali, targets=y_vali, feed_dict={toy_data_net.lr: learning_rate})
             learning_rate = learning_rate / 3
+            iter_count += 1
+            
             
         kernel_pre = toy_net_trainer.evaluate(ops=toy_data_net.kernel_pre)
         kernel_post = toy_net_trainer.evaluate(ops=toy_data_net.kernel_post)
