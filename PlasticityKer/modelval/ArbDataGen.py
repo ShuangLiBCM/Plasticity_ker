@@ -137,6 +137,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
 
         else:
             print('Wrong time interval!')
+            return
 
     # pre-post: 5-5
     elif (int(ptl.pre_spk_num) == 5) & (int(ptl.post_spk_num) == 5):
@@ -199,7 +200,8 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
         if spk_len is None:
             spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
-
+        
+        k = 0
         for i in range(len(ptl_list)):
             data_ptl = df[df['ptl_idx'] == ptl_list[i]]
 
@@ -209,8 +211,8 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
                     _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
                     spk_pairs.append(spk_pair)
                     if targets is not None:
-                        target_gen.append(targets[j])
-
+                        target_gen.append(targets[k])
+                k += 1
         # Generate the spike data
         spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
     

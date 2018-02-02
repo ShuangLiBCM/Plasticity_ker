@@ -71,7 +71,7 @@ def triplet_dw_gen(dt=None):
     targets2 = np.array(data2_gen['dw_mean']).reshape(-1, 1)
 
     data4_gen = data4
-    targets4 = np.array(data3['dw_mean']).reshape(-1, 1)
+    targets4 = np.array(data4['dw_mean']).reshape(-1, 1)
 
     data_gen = pd.concat([data2_gen, data4_gen])
     targets = np.concatenate([targets2, targets4])
