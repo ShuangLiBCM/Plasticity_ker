@@ -39,6 +39,7 @@ def STDP_dw_gen(n_neighbors=3, df=None):
 
     return df, y_pred
 
+
 def triplet_dw_gen(dt=None):
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
