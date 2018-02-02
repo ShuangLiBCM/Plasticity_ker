@@ -169,7 +169,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
        
         # Find the same spk_time_post and seperate them
         if (np.diff(spk_time_post) == 0).any():
-            spk_time_same[np.where(np.diff(spk_time_post) == 0)[0]+1] = spk_time_same[np.where(np.diff(spk_time_post) == 0)[0]+1]+1
+            spk_time_post[np.where(np.diff(spk_time_post) == 0)[0]+1] = spk_time_post[np.where(np.diff(spk_time_post) == 0)[0]+1]+1
     else:
         print('Wrong ptl!')
 
@@ -193,25 +193,26 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
     :return:
     """
     
-    spk_pairs = []
-    target_gen = []
+    if spk_pairs is None:
+        spk_pairs = []
+        target_gen = []
 
-    if spk_len is None:
-        spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
+        if spk_len is None:
+            spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
 
-    for i in range(len(ptl_list)):
-        data_ptl = df[df['ptl_idx'] == ptl_list[i]]
+        for i in range(len(ptl_list)):
+            data_ptl = df[df['ptl_idx'] == ptl_list[i]]
 
-        for j in range(len(data_ptl)):
-            ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
-            for _ in range(aug_times[i]):
-                _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
-                spk_pairs.append(spk_pair)
-                if targets is not None:
-                    target_gen.append(targets[j])
+            for j in range(len(data_ptl)):
+                ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
+                for _ in range(aug_times[i]):
+                    _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
+                    spk_pairs.append(spk_pair)
+                    if targets is not None:
+                        target_gen.append(targets[j])
 
-    # Generate the spike data
-    spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
+        # Generate the spike data
+        spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
     
     # Get the network used to generate prediction
     if targets is None:
