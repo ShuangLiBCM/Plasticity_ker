@@ -37,4 +37,4 @@ def STDP_dw_gen(n_neighbors=3, df=None):
     Kn_reg.fit(x, y)
     y_pred = Kn_reg.predict(np.array(df['dt1']).reshape(-1, 1))
 
-    return y_pred
+    return df, y_pred
