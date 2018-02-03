@@ -4,7 +4,7 @@
 import numpy as np
 from modelval import pairptl, network, trainer
 
-def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
+def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
     """
     Generate a single set of pre-spike, post-spike trains and target given the ptl
     -------------------------------
@@ -35,10 +35,13 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
 
     # Consider the max dt = 120 ms
     min_bef = int(120//spk_reso + 1)
+    
+    if seed is not None:
+        np.random.seed(seed)
 
     # pre-post: 1-1
     if (int(ptl.pre_spk_num) == 1) & (int(ptl.post_spk_num) == 1):
-
+            
         spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         # Obtain time index of spike
         spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
@@ -101,11 +104,11 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
         mean_dt = int(ptl.dt2/spk_reso)
         if if_noise:
             within_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_base1.shape).astype(int)
-            within_noise = within_noise * (np.abs(within_noise) < np.abs(mean_dt))
-            spk_time_base2 = spk_time_base1 + np.abs(mean_dt) + within_noise
-        else:
-            spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
-
+            if (np.abs(within_noise) < np.abs(mean_dt)) and ((np.abs(mean_dt) + within_noise) > 10):
+                spk_time_base2 = spk_time_base1 + np.abs(mean_dt) + within_noise
+            else:
+                spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
+                
         if ptl.dt2 < 0:  # Pre-post-post-pre
             spk_time_post1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_post2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
@@ -115,8 +118,10 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
                                               size=spk_time_post2.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
-            spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso) + between_noise1
-            spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso) + between_noise2
+            #spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso) + between_noise1
+            #spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso) + between_noise2
+            spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso)
+            spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso)
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
 
@@ -129,8 +134,10 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
                                               size=spk_time_pre2.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
-            spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso) + between_noise1
-            spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso) + between_noise2
+            #spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso) + between_noise1
+            #spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso) + between_noise2
+            spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso)
+            spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso)
             # Obtain spike train
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
@@ -182,7 +189,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1):
     return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None, net_type='pair'):
+def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None, seed=None, net_type='triplet'):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     ------------------------------
@@ -207,8 +214,12 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
             for j in range(len(data_ptl)):
                 ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
-                for _ in range(aug_times[i]):
-                    _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1)
+                for s in range(aug_times[i]):
+                    if seed:
+                        seed_set = i * len(ptl_list) + j * len(data_ptl) + s
+                    else:
+                        seed_set = None
+                    _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1, seed=seed_set)
                     spk_pairs.append(spk_pair)
                     if targets is not None:
                         target_gen.append(targets[k])

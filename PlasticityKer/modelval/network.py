@@ -133,7 +133,8 @@ class PairNet(object):
                 self.fc_w = tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                             initializer=self.random_init(self.init_seed[2]),
                                             name='fully_connect_weights')
-
+                
+            self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
 
@@ -142,7 +143,7 @@ class PairNet(object):
 
             self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2], axis=1)
 
-            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w[:2], axis=1))
+            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w[:2], axis=1)) + self.bias
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
             self.l2_loss = (self.l2_loss_unit(self.kernel_pre) + self.l2_loss_unit(
@@ -248,7 +249,8 @@ class TripNet(PairNet):
 
                 self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
-
+            
+            self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
             self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)
@@ -260,7 +262,7 @@ class TripNet(PairNet):
 
             self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2, self.trip_term], axis=1)
 
-            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1))
+            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1)) + self.bias
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
             self.l2_loss = (self.l2_loss_unit(self.kernel_pre)+self.l2_loss_unit(self.kernel_post)+self.l2_loss_unit(self.kernel_post_post))/3

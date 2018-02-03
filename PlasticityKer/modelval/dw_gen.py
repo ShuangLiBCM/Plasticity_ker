@@ -77,3 +77,13 @@ def triplet_dw_gen(dt=None):
     targets = np.concatenate([targets2, targets4])
 
     return data_gen, targets
+
+def smooth(x, width=10, width_list=None):
+    y = np.zeros(x.shape)
+    if width_list is None:
+        for i in range(x.shape[0]):
+            y[i] = np.mean(x[np.max([0, i-int(width/2)]):np.min([x.shape[0], i+int(width/2)])])
+    else:
+        for i in range(x.shape[0]):
+            y[i] = np.mean(x[np.max([0, i-int(width_list[i])]):np.min([x.shape[0], i+int(width_list[i])])])
+    return y
