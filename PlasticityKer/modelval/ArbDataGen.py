@@ -3,6 +3,7 @@
 """
 import numpy as np
 from modelval import pairptl, network, trainer
+import pdb
 
 def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
     """
@@ -61,36 +62,39 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         mean_dt1 = int(ptl.dt1 / spk_reso)
         mean_dt2 = int(ptl.dt2 / spk_reso)
         # Obtain time index of spike
-        if_noise=0
         if if_noise:
             spk_time_post = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
-            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 2]), size=spk_time_post.shape).astype(int)
-            between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(mean_dt1))
+            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 1]), size=spk_time_post.shape).astype(int)
+            
+            for i in range(len(between_noise1)):
+                if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1),np.abs(mean_dt2)]))|(np.abs(mean_dt1 + between_noise1[i])<=1)|(np.abs(mean_dt2 + between_noise1[i])<=1):
+                    between_noise1[i] = 0
+            
             spk_time_pre1 = spk_time_post + mean_dt1 + between_noise1
-            between_noise2 = -1 * between_noise1
-            spk_time_pre2 = spk_time_post + mean_dt2 + between_noise2
+            spk_time_pre2 = spk_time_post + mean_dt2 - between_noise1
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
         else:
             spk_time_post = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
             spk_time_pre1 = spk_time_post + mean_dt1
             spk_time_pre2 = spk_time_post + mean_dt2
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
-
     # pre-post: 1-2
     elif (int(ptl.pre_spk_num) == 1) & (int(ptl.post_spk_num) == 2):
         spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         mean_dt1 = int(ptl.dt1 / spk_reso)
         mean_dt2 = int(ptl.dt2 / spk_reso)
         # Obtain time index of spike
-        if_noise = 0
         if if_noise:
             spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
-            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 2]), size=spk_time_pre.shape).astype(int)
-            between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(ptl.dt1/spk_reso))
+            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 1]), size=spk_time_pre.shape).astype(int)
+            for i in range(len(between_noise1)):
+                if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1),np.abs(mean_dt2)]))|(np.abs(mean_dt1 + between_noise1[i])<=1)|(np.abs(mean_dt2 + between_noise1[i])<=1):
+                    between_noise1[i] = 0
+                    
             spk_time_post1 = spk_time_pre - mean_dt1 + between_noise1
-            between_noise2 = -1 * between_noise1
-            spk_time_post2 = spk_time_pre - mean_dt2 + between_noise2
+            spk_time_post2 = spk_time_pre - mean_dt2 - between_noise1
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
+            
         else:
             spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
             spk_time_post1 = spk_time_pre - mean_dt1
@@ -125,8 +129,6 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
                                               size=spk_time_post2.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
-            #spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso) + between_noise1
-            #spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso) + between_noise2
             spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso)
             spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso)
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
@@ -141,8 +143,6 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt3 / spk_reso), 2]),
                                               size=spk_time_pre2.shape).astype(int)
             between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(ptl.dt3/spk_reso))
-            #spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso) + between_noise1
-            #spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso) + between_noise2
             spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso)
             spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso)
             # Obtain spike train
@@ -237,7 +237,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
     # Get the network used to generate prediction
     if targets is None:
         if net_type == 'pair':
-            gen_pairnet = network.PairNet(kernel=kernel, n_input=spk_pairs.shape[1])
+            gen_pairnet = network.PairNet(kernel=kernel, ground_truth_init=1, n_input=spk_pairs.shape[1])
             # Send the network graph into trainer, and name of placeholder
             gen_pairnet_train = trainer.Trainer(gen_pairnet.prediction, gen_pairnet.prediction, input_name=gen_pairnet.inputs)
 
@@ -245,7 +245,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
             targets = gen_pairnet_train.evaluate(ops=gen_pairnet.prediction, inputs=spk_pairs)
 
         elif net_type == 'triplet':
-            gen_tripnet = network.TripNet(kernel=kernel, n_input=spk_pairs.shape[1])
+            gen_tripnet = network.TripNet(kernel=kernel, ground_truth_init=1, n_input=spk_pairs.shape[1])
 
             # Send the network graph into trainer, and name of placeholder
             gen_tripnet_train = trainer.Trainer(gen_tripnet.prediction, gen_tripnet.prediction,

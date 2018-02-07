@@ -55,6 +55,7 @@ class PairNet(object):
         self.kernel_post_const = kernel.kernel_post
         self.kernel_post_post_const = kernel.kernel_post_post
         self.kernel_scale = kernel.kernel_scale
+        self.kernel_bias = kernel.bias
         self.reg_scale = reg_scale
         self.ground_truth_init = ground_truth_init
         self.init_seed = init_seed
@@ -244,6 +245,8 @@ class TripNet(PairNet):
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
                 self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_scale),
                                                    name='const_fully_connect_weights')
+                self.bias = tf.get_variable(shape=self.kernel_bias.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_bias),
+                                                   name='const_bias')
             else:
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
                                                   initializer=self.random_init(self.init_seed[0]), name='pre_kernel')
@@ -257,8 +260,9 @@ class TripNet(PairNet):
 
                 self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
+                self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
+
             self.hp_ker = tf.get_variable(name='hp_ker', shape=[3,1], initializer=tf.constant_initializer(np.array([1, -2, 1]).reshape(-1,1)))
-            self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
             self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)
