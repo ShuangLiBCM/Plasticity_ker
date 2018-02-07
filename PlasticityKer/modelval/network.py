@@ -133,7 +133,7 @@ class PairNet(object):
                 self.fc_w = tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                             initializer=self.random_init(self.init_seed[2]),
                                             name='fully_connect_weights')
-                
+            
             self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
@@ -186,14 +186,22 @@ class PairNet(object):
 
         return initializer
     
+    def l2_loss(self, kernel_raw):
+        return tf.nn.l2_loss(kernel_raw)
+    
     def l2_loss_unit(self, kernel_raw):
         return tf.square(tf.norm(kernel_raw, ord=2) - 1)
+    
+    def kernel_hp(self, w):
+        w_out = tf.nn.conv1d(tf.expand_dims(input=w, axis=0), tf.expand_dims(self.hp_ker, axis=2), stride=1, padding='SAME')
+        return w_out
+    
 # ==============================================================================================
 
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3, 1)), reg_scale=(0, 1), init_seed=(0, 1, 2, 3)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3, 1)), reg_scale=(1, 1), init_seed=(0, 1, 2, 3)):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init, reg_scale=reg_scale, init_seed=init_seed)
         """
         Create and build the PairNet
@@ -249,7 +257,7 @@ class TripNet(PairNet):
 
                 self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
-            
+            self.hp_ker = tf.get_variable(name='hp_ker', shape=[3,1], initializer=tf.constant_initializer(np.array([1, -2, 1]).reshape(-1,1)))
             self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
@@ -265,9 +273,14 @@ class TripNet(PairNet):
             self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1)) + self.bias
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
-            self.l2_loss = (self.l2_loss_unit(self.kernel_pre)+self.l2_loss_unit(self.kernel_post)+self.l2_loss_unit(self.kernel_post_post))/3
+            
+            self.l2 = (self.l2_loss_unit(self.kernel_pre)+self.l2_loss_unit(self.kernel_post)+self.l2_loss_unit(self.kernel_post_post))/3
+            
+            self.hp_pre = self.kernel_hp(self.kernel_pre)
+            self.hp_post = self.kernel_hp(self.kernel_post)
+            self.hp_l2_loss = self.l2_loss(self.hp_pre)+self.l2_loss(self.hp_post)
 
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.loss = self.mse + self.alpha_l2 * self.l2_loss
+            self.loss = self.mse + self.alpha_l2 * self.l2 + self.alpha_l1 * self.hp_l2_loss

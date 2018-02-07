@@ -46,7 +46,6 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         # Obtain time index of spike
         spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
         mean_dt = int(ptl.dt1 / spk_reso)
-
         # Generate noise
         if if_noise:
             between_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_pre.shape).astype(int)
@@ -62,18 +61,18 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         mean_dt1 = int(ptl.dt1 / spk_reso)
         mean_dt2 = int(ptl.dt2 / spk_reso)
         # Obtain time index of spike
+        if_noise=0
         if if_noise:
             spk_time_post = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
             between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 2]), size=spk_time_post.shape).astype(int)
             between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(mean_dt1))
             spk_time_pre1 = spk_time_post + mean_dt1 + between_noise1
-            between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt2/2), 2]), size=spk_time_post.shape).astype(int)
-            between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(mean_dt2))
+            between_noise2 = -1 * between_noise1
             spk_time_pre2 = spk_time_post + mean_dt2 + between_noise2
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
         else:
             spk_time_post = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
-            spk_time_pre1 = spk_time_post + mean_dt2
+            spk_time_pre1 = spk_time_post + mean_dt1
             spk_time_pre2 = spk_time_post + mean_dt2
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
 
@@ -83,13 +82,13 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         mean_dt1 = int(ptl.dt1 / spk_reso)
         mean_dt2 = int(ptl.dt2 / spk_reso)
         # Obtain time index of spike
+        if_noise = 0
         if if_noise:
             spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
             between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 2]), size=spk_time_pre.shape).astype(int)
             between_noise1 = between_noise1 * (np.abs(between_noise1) < np.abs(ptl.dt1/spk_reso))
             spk_time_post1 = spk_time_pre - mean_dt1 + between_noise1
-            between_noise2 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt2/2), 2]), size=spk_time_pre.shape).astype(int)
-            between_noise2 = between_noise2 * (np.abs(between_noise2) < np.abs(mean_dt2))
+            between_noise2 = -1 * between_noise1
             spk_time_post2 = spk_time_pre - mean_dt2 + between_noise2
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
         else:
@@ -104,11 +103,19 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         mean_dt = int(ptl.dt2/spk_reso)
         if if_noise:
             within_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_base1.shape).astype(int)
-            if (np.abs(within_noise) < np.abs(mean_dt)) and ((np.abs(mean_dt) + within_noise) > 10):
+            if (np.abs(within_noise) < np.abs(mean_dt)) & (np.abs(mean_dt) + within_noise > 5) & (np.abs(mean_dt) + within_noise <= 45):
                 spk_time_base2 = spk_time_base1 + np.abs(mean_dt) + within_noise
             else:
+                if np.abs(mean_dt) <=50:
+                    spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
+                else:
+                    spk_time_base2 = spk_time_base1 + 45
+        else:
+            if np.abs(mean_dt) <=50:
                 spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
-                
+            else:
+                spk_time_base2 = spk_time_base1 + 45
+        
         if ptl.dt2 < 0:  # Pre-post-post-pre
             spk_time_post1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_post2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
@@ -189,7 +196,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
     return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None, seed=None, net_type='triplet'):
+def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None, seed=None, net_type='triplet', if_noise=1):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     ------------------------------
@@ -219,7 +226,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
                         seed_set = i * len(ptl_list) + j * len(data_ptl) + s
                     else:
                         seed_set = None
-                    _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=1, seed=seed_set)
+                    _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=if_noise, seed=seed_set)
                     spk_pairs.append(spk_pair)
                     if targets is not None:
                         target_gen.append(targets[k])

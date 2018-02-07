@@ -47,35 +47,32 @@ def triplet_dw_gen(dt=None):
     data4 = data[data['ptl_idx'] == 4]
 
     if dt is None:
-        dt = np.array([-10, -5, 0, 5, 10]).reshape(-1, 1)
+        dt = np.array([10,5,0,-5,10]).reshape(-1, 1)
 
     data2_gen = pd.DataFrame(data=None, columns=list(data.columns))
 
     for i in range(len(dt)):
-        new_try2 = data2.iloc[0]
-        if dt[i] < 0:
+        if dt[i] != 0:
+            new_try2 = data2[data2['dt1'] == dt[i][0]].iloc[0]
+            new_try2['dw_mean'] = data2[data2['dt1'] == dt[i][0]]['dw_mean'].mean()
+        elif dt[i] == 0:
+            new_try2 = data2.iloc[0]
             new_try2['dt1'] = dt[i]
             new_try2['dt2'] = dt[i]
-            new_try2['dw_mean'] = data2[data2['dt1'] < 0]['dw_mean'].mean()
-        if dt[i] == 0:
-            new_try2['dt1'] = dt[i]
-            new_try2['dt2'] = dt[i]
-            new_try2['dw_mean'] = 60
-        elif dt[i] > 0:
-            new_try2['dt1'] = dt[i]
-            new_try2['dt2'] = dt[i]
-            new_try2['dw_mean'] = data2[data2['dt1'] > 0]['dw_mean'].mean()
+            new_try2['dw_mean'] = 50
 
         data2_gen = data2_gen.append(new_try2, ignore_index=True)
 
     targets2 = np.array(data2_gen['dw_mean']).reshape(-1, 1)
 
-    data4_gen = data4
-    targets4 = np.array(data4['dw_mean']).reshape(-1, 1)
+    #data4_gen = data4
+    #targets4 = np.array(data4['dw_mean']).reshape(-1, 1)
 
-    data_gen = pd.concat([data2_gen, data4_gen])
-    targets = np.concatenate([targets2, targets4])
-
+    #data_gen = pd.concat([data2_gen, data4_gen])
+    #targets = np.concatenate([targets2, targets4])
+    data_gen = data2_gen
+    targets = targets2
+    
     return data_gen, targets
 
 def smooth(x, width=10, width_list=None):
