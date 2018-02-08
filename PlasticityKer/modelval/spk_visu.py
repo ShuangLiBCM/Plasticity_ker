@@ -3,6 +3,7 @@ Visualize spike train raster plots of a certain protocol
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import pdb
 
 def spk_see(ptl_type=1, spk_pairs=None):
 
@@ -29,6 +30,7 @@ def spk_see(ptl_type=1, spk_pairs=None):
         for i in range(spk_pairs.shape[0]):
             loci_pre_tmp = np.where(spk_pairs[i, :, 0] == 1)[0]
             loci_post_tmp = np.where(spk_pairs[i, :, 1] == 1)[0]
+
             if len(loci_pre_tmp) == len(loci_post_tmp) * 2:  # Pre-post-pre
                 loci_pre.append(loci_pre_tmp)
                 loci_post.append(loci_post_tmp)
@@ -39,9 +41,7 @@ def spk_see(ptl_type=1, spk_pairs=None):
                 loci_post.append(loci_post_tmp)
                 index_post = np.arange(0, len(loci_post_tmp), 2)
                 dt_mean.append(np.mean(loci_post_tmp[index_post] - loci_pre_tmp))
-            else:
-                print('Wrong length!!')
-
+        
         sort_index = np.argsort(dt_mean)
         loci_pre_2 = [loci_pre[i] for i in sort_index]
         loci_post_2 = [loci_post[i] for i in sort_index]
