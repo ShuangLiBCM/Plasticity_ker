@@ -147,7 +147,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt1 / spk_reso), 2]),
                                               size=spk_time_pre1.shape).astype(int)
             for i in range(len(between_noise1)):
-                if np.abs(between_noise1) >= np.abs(ptl.dt1/spk_reso):
+                if np.abs(between_noise1[i]) >= np.abs(ptl.dt1/spk_reso):
                     between_noise1[i] = 0
 
             betwee_noise2 = -1 * between_noise1

@@ -4,7 +4,7 @@ Visualize spike train raster plots of a certain protocol
 import matplotlib.pyplot as plt
 import numpy as np
 
-def spk_see(ptl_type=1, spk_pairs):
+def spk_see(ptl_type=1, spk_pairs=None):
 
     if ptl_type == 1:
         # Obtain the pre-post scatter plot
