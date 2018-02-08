@@ -73,6 +73,34 @@ def triplet_dw_gen(dt=None):
     
     return data_gen, targets
 
+def quad_dw_gen(n_neighbors=7, df=None):
+
+    data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
+    data3 = data[data['ptl_idx'] == 3]
+    x = np.array(data3['dt2']).reshape(-1, 1)
+    y = np.array(data3['dw_mean']).reshape(-1, 1)
+
+    # Generate dt1 if dt_list is None
+    # Insert values for STDP
+    if df is None:
+        dt = np.concatenate([np.arange(-100, -10, 2).reshape(-1, 1), np.arange(10, 100, 2).reshape(-1, 1)])
+        data3_gen = pd.DataFrame(data=None, columns=list(data.columns))
+        for i in range(len(dt)):
+            new_try3 = data3.iloc[0]
+            new_try3['dt2'] = dt[i]
+            data3_gen = data3_gen.append(new_try3, ignore_index=True)
+
+        df = data3_gen
+
+    # Use K nearest neighbors to estimate the mean value of a given dt1
+    weights = 'uniform'
+
+    kn_reg = KNeighborsRegressor(n_neighbors=n_neighbors, weights=weights)
+    kn_reg.fit(x, y)
+    y_pred = kn_reg.predict(np.array(df['dt2']).reshape(-1, 1))
+
+    return df, y_pred
+
 def smooth(x, width=10, width_list=None):
     y = np.zeros(x.shape)
     if width_list is None:
