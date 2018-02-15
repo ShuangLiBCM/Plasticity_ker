@@ -5,22 +5,29 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsRegressor
+import pdb
 
 import seaborn as sns
 import tensorflow as tf
 from modelval import pairptl, network, trainer, dataset
 from modelval.ArbDataGen import arb_w_gen
 
-def STDP_dw_gen(n_neighbors=3, df=None):
-
-    data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
-    data1 = data[data['ptl_idx'] == 1]
-    x = np.array(data1['dt1']).reshape(-1, 1)
-    y = np.array(data1['dw_mean']).reshape(-1, 1)
-
+def STDP_dw_gen(n_neighbors=3, df_ori=None, df_gen=None):
+    
+    if df_ori is None:
+        data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
+        data1 = data[data['ptl_idx'] == 1]
+        x = np.array(data1['dt1']).reshape(-1, 1)
+        y = np.array(data1['dw_mean']).reshape(-1, 1)
+    else:
+        data = df_ori
+        data1 = data[data['ptl_idx'] == 1]
+        x = np.array(data1['dt1']).reshape(-1, 1)
+        y = np.array(data1['dw_mean']).reshape(-1, 1)
+        
     # Generate dt1 if dt_list is None
     # Insert values for STDP
-    if df is None:
+    if df_gen is None:
         dt = np.arange(-100, 100, 2)
         data1_gen = pd.DataFrame(data=None, columns=list(data.columns))
         for i in range(len(dt)):
@@ -111,13 +118,24 @@ def smooth(x, width=10, width_list=None):
             y[i] = np.mean(x[np.max([0, i-int(width_list[i])]):np.min([x.shape[0], i+int(width_list[i])])])
     return y
 
-def idx_gen(ptl_len, rep_time):
+def target_pred_gen(targets, predictions, ptl_len, rep_time):
     """
-    Return index for begining and end of each protocol
+    Return matched targets and predictions for each protocol
     :param ptl_len: list of length for each protocol
     :param rep_time: list of protocol repetition protocol
     :return:
     """
-    idx_ptl = [x * i for x, j in zip(ptl_len, rep_time)]
-
-    return idx_ptl
+    ptl_len = [x * i for x, i in zip(ptl_len, rep_time)]
+    
+    targets_out = []
+    predictions_out = []
+    
+    for i in range(len(ptl_len)):
+        if i == 0:
+            targets_out.append(targets[:ptl_len[i]])
+            predictions_out.append(predictions[:ptl_len[i]])
+        else:
+            targets_out.append(targets[sum(ptl_len[:i]):sum(ptl_len[:i+1])])
+            predictions_out.append(predictions[sum(ptl_len[:i]):sum(ptl_len[:i+1])])
+    
+    return ptl_len, targets_out, predictions_out
