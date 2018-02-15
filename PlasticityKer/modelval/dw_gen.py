@@ -110,3 +110,14 @@ def smooth(x, width=10, width_list=None):
         for i in range(x.shape[0]):
             y[i] = np.mean(x[np.max([0, i-int(width_list[i])]):np.min([x.shape[0], i+int(width_list[i])])])
     return y
+
+def idx_gen(ptl_len, rep_time):
+    """
+    Return index for begining and end of each protocol
+    :param ptl_len: list of length for each protocol
+    :param rep_time: list of protocol repetition protocol
+    :return:
+    """
+    idx_ptl = [x * i for x, j in zip(ptl_len, rep_time)]
+
+    return idx_ptl
