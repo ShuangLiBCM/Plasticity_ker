@@ -3,6 +3,8 @@ FROM eywalker/tensorflow-jupyter:v1.0.1-cuda8.0-cudnn5
 RUN pip3 install seaborn
 # RUN pip3 install --upgrade tensorflow
 RUN pip3 install git+https://github.com/datajoint/datajoint-python.git
+RUN pip3 install git+https://github.com:jmetzen/gp_extras.git
+
 
 WORKDIR /src
 
