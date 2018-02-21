@@ -66,14 +66,19 @@ class GP_regressor(object):
 
         return self.f, self.v_f, self.lp
 
-    def sample(self, n_samples):
+    def sample(self, n_samples, cov=None):
         """
         Sample at x_test
         :param n_samples: number of repeated samples to generate
+        :param cov: specified covariance matrix to generate sample from
         :return:
         y_test: generated samples (k, n_samples)
         """
-        self.y_test = np.random.multivariate_normal(np.squeeze(self.f), self.v_f, n_samples).T
+        if cov is None:
+            self.y_test = np.random.multivariate_normal(np.squeeze(self.f), self.v_f, n_samples).T
+        else:
+            assert cov.shape[0] == np.squeeze(self.f).shape[0]
+            self.y_test = np.random.multivariate_normal(np.squeeze(self.f), cov, n_samples).T
 
         return self.y_test
 
