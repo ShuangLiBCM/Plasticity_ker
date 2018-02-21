@@ -12,7 +12,35 @@ import tensorflow as tf
 from modelval import pairptl, network, trainer, dataset
 from modelval.ArbDataGen import arb_w_gen
 
-def STDP_dw_gen(n_neighbors=3, df_ori=None, df_gen=None):
+
+def STDP_dw_gen(dt, df_ori=None):
+    """
+    put dt into data frame
+    """
+    if df_ori is None:
+        data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
+        data1 = data[data['ptl_idx'] == 1]
+        x = np.array(data1['dt1']).reshape(-1, 1)
+        y = np.array(data1['dw_mean']).reshape(-1, 1)
+    else:
+        data = df_ori
+        data1 = data[data['ptl_idx'] == 1]
+        x = np.array(data1['dt1']).reshape(-1, 1)
+        y = np.array(data1['dw_mean']).reshape(-1, 1)
+        
+    # Insert values for STDP
+    data1_gen = pd.DataFrame(data=None, columns=list(data.columns))
+    for i in range(len(dt)):
+        new_try1 = data1.iloc[0]
+        new_try1['dt1'] = dt[i]
+        data1_gen = data1_gen.append(new_try1, ignore_index=True)
+
+    df = data1_gen
+
+    return df
+
+
+def STDP_dw_gen_knn(n_neighbors=3, df_ori=None, df_gen=None):
     
     if df_ori is None:
         data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
@@ -47,7 +75,7 @@ def STDP_dw_gen(n_neighbors=3, df_ori=None, df_gen=None):
     return df, y_pred
 
 
-def triplet_dw_gen(dt=None):
+def triplet_dw_gen_knn(dt=None):
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
     data2 = data[data['ptl_idx'] == 2]
@@ -80,7 +108,7 @@ def triplet_dw_gen(dt=None):
     
     return data_gen, targets
 
-def quad_dw_gen(n_neighbors=7, df=None):
+def quad_dw_gen_knn(n_neighbors=7, df=None):
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
     data3 = data[data['ptl_idx'] == 3]
