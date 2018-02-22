@@ -12,8 +12,7 @@ import tensorflow as tf
 from modelval import pairptl, network, trainer, dataset
 from modelval.ArbDataGen import arb_w_gen
 
-
-def STDP_dw_gen(dt, df_ori=None):
+def STDP_dw_gen_gp(dt, df_ori=None):
     """
     put dt into data frame
     """

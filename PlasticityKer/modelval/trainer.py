@@ -2,7 +2,6 @@
     Create network classes
 """
 import tensorflow as tf
-from tensorflow.python.util import nest
 from os.path import join
 from os import path, makedirs
 

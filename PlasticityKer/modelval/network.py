@@ -67,36 +67,7 @@ class PairNet(object):
         :param: n_input, length of input
         :return:
         """
-        # with self.graph.as_default():
-        #
-        #     self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
-        #     self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
-        #     self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
-        #     self.lr = tf.placeholder(tf.float32, name='learning_rate')
-        #
-        #     self.kernel_pre = tf.get_variable(shape=self.kernel_pre.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre), trainable=False,
-        #                                           name='const_pre_kernel')
-        #     if self.ground_truth_init:  # Not in training model
-        #         self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post * self.kernel_scale),
-        #                                            name='const_post_kernel')
-        #     else:
-        #         kernel_len = self.kernel.len_kernel
-        #         self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
-        #                                            initializer=self.random_init(self.init_seed), name='post_kernel')
-        #
-        #     self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
-        #
-        #     self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
-        #     self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
-        #
-        #     self.prediction = tf.reduce_sum(tf.multiply(self.y_pre, self.y_post), 1) + self.bias
-        #
-        #     self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
-        #
-        #     self.alpha_l1 = self.reg_scale[0]
-        #     self.alpha_l2 = self.reg_scale[1]
-        #
-        #     self.loss = self.mse + self.regularization()
+
         with self.graph.as_default():
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
