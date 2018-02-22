@@ -4,6 +4,7 @@
 import tensorflow as tf
 from os.path import join
 from os import path, makedirs
+from tensorflow.python.util import nest
 
 class Trainer(object):
 
