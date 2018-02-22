@@ -47,7 +47,7 @@ def stdp_gp():
     # plt.plot(x_aug, f, label='Mean function')
     #
     # plt.legend(loc='upper left')
-    return x_aug, f_samp, f_mean, f_std
+    return x_aug, f_samp, f_mean, f_std, x_test, y_test
 
 
 def STDP_dw_gen(dt, df_ori=None):
