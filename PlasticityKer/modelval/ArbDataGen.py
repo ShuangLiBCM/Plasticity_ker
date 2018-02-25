@@ -206,7 +206,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
 
 
 def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None,
-              seed=None, net_type='triplet', if_noise=1):
+              seed=None, net_type='triplet', if_noise=1, batch_size=1000):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     three situations in total:
@@ -228,11 +228,12 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
         if spk_len is None:
             spk_len = int(15 / 0.1 * 1000 / kernel.reso_kernel)   # The longest protocol
-        
-        k = 0
+
         for i in range(len(ptl_list)):
             data_ptl = df[df['ptl_idx'] == ptl_list[i]]
+            target_tmp = targets[df['ptl_idx'] == ptl_list[i]]
 
+            k = 0
             for j in range(len(data_ptl)):
                 ptl_info = pairptl.PairPtl(*data_ptl.iloc[j])
                 for s in range(aug_times[i]):
@@ -243,7 +244,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
                     _, _, spk_pair = arb_spk_gen(ptl_info, kernel.reso_kernel, spk_len=spk_len, if_noise=if_noise, seed=seed_set)
                     spk_pairs.append(spk_pair)
                     if targets is not None:
-                        target_gen.append(targets[k])
+                        target_gen.append(target_tmp[k])
                 k += 1
         # Generate the spike data
         spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
@@ -266,7 +267,13 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
                                                 input_name=gen_tripnet.inputs)
 
             # generate targets through evaluating the prediction of the network
-            targets = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs)
+            targets = np.zeros(spk_pairs.shape[0]).reshape(-1,1)
+            k = 0
+            while k * batch_size < spk_pairs.shape[0]:
+                targets[k*batch_size:(k+1)*batch_size] = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs[k*batch_size:(k+1)*batch_size,:,:])
+                k+=1
+            targets[k*batch_size:] = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs[k*batch_size:,:,:])
+            
         else:
             print('Wrong network!!')
     else:

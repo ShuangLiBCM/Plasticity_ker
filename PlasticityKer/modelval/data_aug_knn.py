@@ -1,5 +1,5 @@
 """
-    Generate dw according to real data
+    Augment data and generate dw according to KNN
 """
 import numpy as np
 import pandas as pd
@@ -12,34 +12,7 @@ import tensorflow as tf
 from modelval import pairptl, network, trainer, dataset
 from modelval.ArbDataGen import arb_w_gen
 
-def STDP_dw_gen_gp(dt, df_ori=None):
-    """
-    put dt into data frame
-    """
-    if df_ori is None:
-        data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
-        data1 = data[data['ptl_idx'] == 1]
-        x = np.array(data1['dt1']).reshape(-1, 1)
-        y = np.array(data1['dw_mean']).reshape(-1, 1)
-    else:
-        data = df_ori
-        data1 = data[data['ptl_idx'] == 1]
-        x = np.array(data1['dt1']).reshape(-1, 1)
-        y = np.array(data1['dw_mean']).reshape(-1, 1)
-        
-    # Insert values for STDP
-    data1_gen = pd.DataFrame(data=None, columns=list(data.columns))
-    for i in range(len(dt)):
-        new_try1 = data1.iloc[0]
-        new_try1['dt1'] = dt[i]
-        data1_gen = data1_gen.append(new_try1, ignore_index=True)
-
-    df = data1_gen
-
-    return df
-
-
-def STDP_dw_gen_knn(n_neighbors=3, df_ori=None, df_gen=None):
+def STDP_dw_gen(n_neighbors=3, df_ori=None, df_gen=None):
     
     if df_ori is None:
         data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
@@ -74,7 +47,7 @@ def STDP_dw_gen_knn(n_neighbors=3, df_ori=None, df_gen=None):
     return df, y_pred
 
 
-def triplet_dw_gen_knn(dt=None):
+def triplet_dw_gen(dt=None):
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
     data2 = data[data['ptl_idx'] == 2]
@@ -83,7 +56,7 @@ def triplet_dw_gen_knn(dt=None):
     if dt is None:
         dt = np.array([10,5,0,-5,10]).reshape(-1, 1)
 
-    data2_gen = pd.DataFrame(data=None, columns=list(data.columns))
+    data_train_gen = pd.DataFrame(data=None, columns=list(data.columns))
 
     for i in range(len(dt)):
         if dt[i] != 0:
@@ -95,17 +68,17 @@ def triplet_dw_gen_knn(dt=None):
             new_try2['dt2'] = dt[i]
             new_try2['dw_mean'] = 50
 
-        data2_gen = data2_gen.append(new_try2, ignore_index=True)
+        data_train_gen = data_train_gen.append(new_try2, ignore_index=True)
 
-    targets2 = np.array(data2_gen['dw_mean']).reshape(-1, 1)
+    y_train = np.array(data_train_gen['dw_mean']).reshape(-1, 1)
 
-    data4_gen = data4
-    targets4 = np.array(data4['dw_mean']).reshape(-1, 1)
+    data_test_gen = data4
+    y_test = np.array(data4['dw_mean']).reshape(-1, 1)
 
-    data_gen = pd.concat([data2_gen, data4_gen])
-    targets = np.concatenate([targets2, targets4])
+    #data_gen = pd.concat([data2_gen, data4_gen])
+    #targets = np.concatenate([targets2, targets4])
     
-    return data_gen, targets
+    return data_train_gen, y_train, data_test_gen, y_test
 
 def quad_dw_gen_knn(n_neighbors=7, df=None):
 

@@ -5,7 +5,7 @@ import numpy as np
 
 class GP_regressor(object):
 
-    def __init__(self, x, y, x_test, sigma_obs=1, sigma_kernel=1, bias=1, noise_const=100, scale=5, if_stat_kernel=True, if_stat_noise=True):
+    def __init__(self, x, y, x_test, sigma_obs=1, sigma_kernel=1, bias=1, noise_const=100, scale=1, if_stat_kernel=True, if_stat_noise=True):
         """
         Initialize regressor with parameters
         :param x: x axis of training data, m data points with d dimension each (m, d)
@@ -30,7 +30,7 @@ class GP_regressor(object):
         self.if_stat_kernel = if_stat_kernel
         self.if_stat_noise = if_stat_noise
 
-    def fit(self):
+    def fit(self, y_bias=None):
         """
         Perform Gaussian Regression on training data and generate prediction for testing data
         :return:
@@ -42,9 +42,9 @@ class GP_regressor(object):
         Refer to book "Gaussian Processes for Machine Learning" algorithm 2.3
 
         """
-
-        y_bias = np.squeeze(np.mean(self.y, axis=0))  # Assume zeros mean, remove bias first, add it back later
-
+        if y_bias is None:
+            y_bias = np.squeeze(np.mean(self.y, axis=0))  # Assume zeros mean, remove bias first, add it back later
+        
         K = self.cov_kernel(self.x, self.x)
         K_test = self.cov_kernel(self.x_test, self.x)
 
@@ -66,16 +66,32 @@ class GP_regressor(object):
 
         return self.f, self.v_f, self.lp
 
-    def sample(self, n_samples):
+    def sample(self, n_samples, cov=None):
         """
         Sample at x_test
         :param n_samples: number of repeated samples to generate
         :return:
         y_test: generated samples (k, n_samples)
         """
-        self.y_test = np.random.multivariate_normal(np.squeeze(self.f), self.v_f, n_samples).T
+        y_test = []
+        if cov is None:
+            for j in range(n_samples):
+                sample = np.zeros(self.f.shape[0])
+                for i in range(self.f.shape[0]):
+                    np.random.seed(j*i+i)
+                    sample_tmp = np.random.multivariate_normal(np.squeeze(self.f), self.v_f, 1).T
+                    sample[i] = sample_tmp[i]
+                y_test.append(sample)
+        else:
+            for j in range(n_samples):
+                sample = np.zeros(self.f.shape[0])
+                for i in range(self.f.shape[0]):
+                    np.random.seed(j*i+i)
+                    sample_tmp = np.random.multivariate_normal(np.squeeze(self.f), cov, 1).T
+                    sample[i] = sample_tmp[i]
+                y_test.append(sample)
 
-        return self.y_test
+        return np.vstack(y_test).reshape(-1,1)
 
 
     def cov_kernel(self, x1, x2):
