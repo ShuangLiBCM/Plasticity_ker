@@ -2,12 +2,12 @@ import numpy as np
 from scipy.integrate import odeint
 import pandas as pd
 import tensorflow as tf
-from atflow.dataset import Dataset
-from atflow.trainers import Trainer
-from learning_plasticity.Kernelnet_triplet_shift import KernelNetTri_Shift
-from learning_plasticity import spk_gen_nonrand as spk_gen2
-from learning_plasticity import spk_gen
-import pdb
+#from atflow.dataset import Dataset
+#from atflow.trainers import Trainer
+#from learning_plasticity.Kernelnet_triplet_shift import KernelNetTri_Shift
+#from learning_plasticity import spk_gen_nonrand as spk_gen2
+#from learning_plasticity import spk_gen
+#import pdb
 
 # Define function for the dynamics of weights 
 def fxn(s0,t,tau):
@@ -81,7 +81,7 @@ def trip_AlltoAll(a, tau, loci_track_pre, loci_track_post, ifSTDP=0, reso = 2, t
                     dw = s0[0] * a[0]    # pair term only
                    # dw = s0[0]
                 else:
-                    dw = s0[0] * (a[0] + a[3] * s[3])
+                    dw = s0[0] * a[0] + s[0] * a[3] * s[3]
                    # dw = s0[0] * (1 + s[3])
 
             wt = wt + dw
@@ -147,7 +147,7 @@ def trip_NearestSpk(a, tau, loci_track_pre, loci_track_post,  ifSTDP=0, reso = 2
                 if ifSTDP:
                     dw = s0[0] * a[0]    # pair term only 
                 else:
-                    dw = s0[0] * (a[0] + a[3] * s[3])
+                    dw = s0[0] * a[0] + s[0] * a[3] * s[3]
                 
             wt = wt + dw
             S = odeint(fxn,s0,t_simu, args=(tau,))

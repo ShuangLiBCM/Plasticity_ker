@@ -90,7 +90,7 @@ class PairNet(object):
                 self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32,
                                                    initializer=tf.constant_initializer(self.kernel_post_const),
                                                    name='const_post_kernel')
-                self.kernel_post = tf.multiply(self.kernel_post, mask)
+                self.kernel_post = tf.multiply(self.kernel_post, mask2)
                 self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32,
                                             initializer=tf.constant_initializer(self.kernel_scale),
                                             name='const_fully_connect_weights')
@@ -100,7 +100,7 @@ class PairNet(object):
                 self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
                 self.kernel_post = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
                                                    initializer=self.random_init(self.init_seed[1]), name='post_kernel')
-                self.kernel_post = tf.multiply(self.kernel_post, mask)
+                self.kernel_post = tf.multiply(self.kernel_post, mask2)
 
                 self.fc_w = tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                             initializer=self.random_init(self.init_seed[2]),
@@ -113,18 +113,19 @@ class PairNet(object):
             self.pair_term1 = tf.reduce_sum(tf.multiply(self.y_pre, tf.expand_dims(self.x_post, axis=2)), 1)
             self.pair_term2 = tf.reduce_sum(tf.multiply(self.y_post, tf.expand_dims(self.x_pre, axis=2)), 1)
 
-            self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2], axis=1)
+            # self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2], axis=1)
 
-            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w[:2], axis=1)) + self.bias
-
+            # self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1)) + self.bias
+            self.prediction = self.pair_term1- self.pair_term2
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
-            self.l2_loss = (self.l2_loss_unit(self.kernel_pre) + self.l2_loss_unit(
-                self.kernel_post)) / 2
+            
+            #self.l2_loss = (self.l2_loss_unit(self.kernel_pre) + self.l2_loss_unit(
+            #    self.kernel_post)) / 2
 
             self.alpha_l1 = self.reg_scale[0]
             self.alpha_l2 = self.reg_scale[1]
 
-            self.loss = self.mse + self.alpha_l2 * self.l2_loss
+            self.loss = self.mse
 
     def conv_1d(self, data=None, kernel=None):
         """
@@ -210,13 +211,13 @@ class TripNet(PairNet):
                 self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
                 self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_const),
                                                    name='const_post_kernel')
-                self.kernel_post = tf.multiply(self.kernel_post, mask)
+                self.kernel_post = tf.multiply(self.kernel_post, mask2)
                 self.kernel_post_post = tf.get_variable(shape=self.kernel_post_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_post_const),
                                                    name='const_post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
                 self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_scale),
                                                    name='const_fully_connect_weights')
-                self.bias = tf.get_variable(shape=self.kernel_bias.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_bias),
+                self.bias = tf.get_variable(shape=len(self.kernel_bias), dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_bias),
                                                    name='const_bias')
             else:
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
@@ -234,6 +235,7 @@ class TripNet(PairNet):
                 self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
 
             self.hp_ker = tf.get_variable(name='hp_ker', shape=[3,1], initializer=tf.constant_initializer(np.array([1, -2, 1]).reshape(-1,1)))
+            
             self.y_pre = self.conv_1d(data=self.x_pre, kernel=self.kernel_pre)
             self.y_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post)
             self.y_post_post = self.conv_1d(data=self.x_post, kernel=self.kernel_post_post)
@@ -259,3 +261,4 @@ class TripNet(PairNet):
             self.alpha_l2 = self.reg_scale[1]
 
             self.loss = self.mse + self.alpha_l2 * self.l2 + self.alpha_l1 * self.hp_l2_loss
+            

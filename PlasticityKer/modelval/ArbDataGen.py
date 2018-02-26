@@ -231,7 +231,8 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
         for i in range(len(ptl_list)):
             data_ptl = df[df['ptl_idx'] == ptl_list[i]]
-            target_tmp = targets[df['ptl_idx'] == ptl_list[i]]
+            if targets is not None:
+                target_tmp = targets[df['ptl_idx'] == ptl_list[i]]
 
             k = 0
             for j in range(len(data_ptl)):

@@ -32,7 +32,7 @@ class KernelGen(object):
         self.kernel_post_post = self.uni_exp_ker()
         self.dot_ker = self.dot_ker()
         self.kernel_scale = kernel_scale
-        self.bias = bias
+        self.bias = np.reshape(bias, (-1,1))
         
     def bi_exp_ker(self, len_kernel=None):
         """
@@ -123,7 +123,7 @@ class KernelGen(object):
         self.kernel_pre = self.uni_exp_ker(side='left', tau=tau_pre_post, scale=1, shift=-1)
         ker_pre_norm = np.linalg.norm(self.kernel_pre, ord=2)
         self.kernel_pre = self.kernel_pre / ker_pre_norm
-        self.kernel_post = self.uni_exp_ker(side='left', tau=tau_post_pre, scale=1)
+        self.kernel_post = self.uni_exp_ker(side='left', tau=tau_post_pre, scale=1, shift=-1)
         ker_post_norm = np.linalg.norm(self.kernel_post, ord=2)
         self.kernel_post = self.kernel_post / ker_post_norm
         self.kernel_post_post = self.uni_exp_ker(side='left', tau=tau_post_post, scale=1, shift=-1)
