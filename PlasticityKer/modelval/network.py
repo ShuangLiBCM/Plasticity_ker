@@ -211,7 +211,7 @@ class TripNet(PairNet):
                 self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
                 self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_const),
                                                    name='const_post_kernel')
-                self.kernel_post = tf.multiply(self.kernel_post, mask2)
+                self.kernel_post = tf.multiply(self.kernel_post, mask)
                 self.kernel_post_post = tf.get_variable(shape=self.kernel_post_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_post_const),
                                                    name='const_post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)

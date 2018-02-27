@@ -7,7 +7,7 @@ import tensorflow as tf
 #from learning_plasticity.Kernelnet_triplet_shift import KernelNetTri_Shift
 #from learning_plasticity import spk_gen_nonrand as spk_gen2
 #from learning_plasticity import spk_gen
-#import pdb
+import pdb
 
 # Define function for the dynamics of weights 
 def fxn(s0,t,tau):
@@ -47,8 +47,8 @@ def trip_AlltoAll(a, tau, loci_track_pre, loci_track_post, ifSTDP=0, reso = 2, t
 
         s0 = np.zeros(4)   
         S_track = []
-        w = []
         w0 = 0
+        w = [np.zeros(int(spk_idx[1]))]
 
         for i in range(spk_idx.shape[0]-1):
             simu_num = spk_idx[i+1] - spk_idx[i]

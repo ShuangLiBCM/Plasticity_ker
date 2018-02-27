@@ -199,8 +199,8 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
 
     spk_time_pre[np.where(spk_time_pre > spk_len)] = spk_len - 1  # Prevent spike outsize protocol
     spk_time_post[np.where(spk_time_post > spk_len)] = spk_len - 1  # Prevent spike outsize protocol
-    spk_pair[spk_time_pre, 0] = 1
-    spk_pair[spk_time_post, 1] = 1
+    spk_pair[spk_time_pre.astype(int), 0] = 1
+    spk_pair[spk_time_post.astype(int), 1] = 1
 
     return spk_time_pre, spk_time_post, spk_pair
 
@@ -231,6 +231,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
         for i in range(len(ptl_list)):
             data_ptl = df[df['ptl_idx'] == ptl_list[i]]
+            
             if targets is not None:
                 target_tmp = targets[df['ptl_idx'] == ptl_list[i]]
 
