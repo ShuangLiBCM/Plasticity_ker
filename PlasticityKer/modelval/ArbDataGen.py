@@ -124,6 +124,9 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             else:
                 spk_time_base2 = spk_time_base1 + time_max
         
+        if ptl.dt2 ==0:
+            ptl.dt2 = -1
+            
         if ptl.dt2 < 0:  # Pre-post-post-pre
             spk_time_post1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_post2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
@@ -157,10 +160,6 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             # Obtain spike train
             spk_time_pre = np.sort(np.concatenate([spk_time_pre1, spk_time_pre2]))
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
-
-        else:
-            print('Wrong time interval!')
-            return
 
     # pre-post: 5-5
     elif (int(ptl.pre_spk_num) == 5) & (int(ptl.post_spk_num) == 5):
