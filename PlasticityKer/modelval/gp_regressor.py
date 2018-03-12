@@ -3,9 +3,11 @@ Implement the Gaussian process with non-stationary kernel and noise
 """
 import numpy as np
 
+
 class GP_regressor(object):
 
-    def __init__(self, x, y, x_test, sigma_obs=1, sigma_kernel=1, bias=1, noise_const=100, scale=1, if_stat_kernel=True, if_stat_noise=True):
+    def __init__(self, x, y, x_test, sigma_obs=1, sigma_kernel=1, bias=1, noise_const=100, scale=1, if_stat_kernel=True,
+                 if_stat_noise=True):
         """
         Initialize regressor with parameters
         :param x: x axis of training data, m data points with d dimension each (m, d)
@@ -93,7 +95,6 @@ class GP_regressor(object):
 
         return np.vstack(y_test).reshape(-1,1)
 
-
     def cov_kernel(self, x1, x2):
 
         K = np.zeros((x1.shape[0], x2.shape[0]))
@@ -105,6 +106,8 @@ class GP_regressor(object):
                 len_scale = np.abs(x1[i, :])
             else:
                 len_scale = 1
+                self.bias = 1
+
             # Sum over the dimension d
             K[i, :] = self.scale * np.exp(-0.5 * np.square(dist / (self.sigma_kernel * np.sqrt(len_scale) + self.bias))).transpose()
 
