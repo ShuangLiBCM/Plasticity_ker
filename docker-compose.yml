@@ -11,6 +11,6 @@ services:
       - "6006:6006"
     volumes:
     - .:/src/Plasticity_Ker/
-    - .:/notebooks
+   # - .:/notebooks
     - ./archive:/tensorboard
-    # - /volumes/lab/shuang_data:/data
+    - /mnt/lab/shuang_data:/data
