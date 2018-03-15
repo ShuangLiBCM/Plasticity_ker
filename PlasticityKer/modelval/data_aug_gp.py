@@ -8,23 +8,30 @@ from modelval import gp_regressor
 import pdb
 
 def stdp_gp(random_state=0, **params):
+    """
+    Generate augmented STDP data through sample from the GP regressor with designated parameter
+    :param random_state:
+    :param params: Enter as keyword argument to the GP regressor
+    :return:
+    """
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
 
     data1 = data[data['ptl_idx'] == 1]
 
-    x_train, x_test, y_train, y_test = train_test_split(data1['dt1'], data1['dw_mean'], test_size=0.2, random_state=random_state)
+    x_train, x_test, y_train, y_test = train_test_split(data1['dt1'], data1['dw_mean'], test_size=0.2,
+                                                        random_state=random_state)
 
     # Fit the training data with Gaussian process
-    x = x_train.reshape(-1, 1)
-    y = y_train.reshape(-1, 1)
-    scaler = data1[np.abs(data1['dt1'])>50]['dw_mean'].std()
-    y = y/scaler
-    x_aug = np.linspace(np.min(x),np.max(x),200).reshape(-1,1)
+    std_stdp = data1[np.abs(data1['dt1']) > 50]['dw_mean'].std()
+    x = x_train.reshape(-1, 1)/100
+    y = y_train.reshape(-1, 1)/std_stdp
 
-    # Use Gaussin regressor that have been validated using hyperparameter
+    x_aug = np.linspace(np.min(x), np.max(x), 200).reshape(-1, 1)
+
+    # Use Gaussian regressor that have been validated using hyper-parameter
     gp_rg = gp_regressor.GP_regressor(x, y, x_aug, **params)
-    f_mean, v_f, lp = gp_rg.fit()
+    f_mean, v_f, lp = gp_rg.fit(y_bias=0)
     
     f_std = np.sqrt(v_f.transpose().diagonal()).reshape(-1, 1)
     # plt.plot(x, y, 'o', label='Raw_train_data')
@@ -32,7 +39,7 @@ def stdp_gp(random_state=0, **params):
     # Sample from the modified distribution
 
     # cov_gen = v_f + np.dot(noise_sigma.T, np.eye(noise_sigma.shape[0]))
-    f_samp = gp_rg.sample(1)*scaler
+    f_samp = np.diagonal(gp_rg.sample(x_aug.shape[0])) * std_stdp
 
     #f_samp = np.zeros(f_mean.shape)
 
@@ -46,7 +53,7 @@ def stdp_gp(random_state=0, **params):
     # plt.plot(x_aug, f, label='Mean function')
     #
     # plt.legend(loc='upper left')
-    return x_aug, f_samp.reshape(-1,1), x_test, y_test.reshape(-1,1)
+    return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1)
 
 def STDP_dw_gen(dt, df_ori=None):
     """
@@ -71,36 +78,40 @@ def STDP_dw_gen(dt, df_ori=None):
     return df
 
 def quad_gp(random_state=0, **params):
+    """
+    Generate augmented Quadruplet data through sample from the GP regressor with designated parameter
+    :param random_state:
+    :param params:
+    :return:
+    """
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
 
     data3 = data[data['ptl_idx'] == 3]
 
+    # Split into training and testing set
     x_train, x_test, y_train, y_test = train_test_split(data3['dt2'].values, data3['dw_mean'].values, test_size=0.2,
                                                         random_state=random_state)
-    
-    scaler = data3[np.abs(data3['dt2'])>100]['dw_mean'].std()
-    y_train = y_train/scaler
-    
-    x_r = x_train[np.where(x_train > 0)[0]].reshape(-1, 1)
-    y_r = y_train[np.where(x_train > 0)[0]].reshape(-1, 1)
-    x_test_r = np.linspace(np.min(x_r), 120, 120).reshape(-1, 1)
 
-    x_l = x_train[np.where(x_train < 0)[0]].reshape(-1, 1)
-    y_l = y_train[np.where(x_train < 0)[0]].reshape(-1, 1)
-    x_test_l = np.linspace(-120, np.max(x_l), 120).reshape(-1, 1)
+    std_quad = data3[(data3['dt2'] < -50)]['dw_mean'].std()
 
-    gp_rg_r = gp_regressor.GP_regressor(x_r, y_r, x_test_r, **params)
-    f_r_mean, v_f_r, lp = gp_rg_r.fit()
-    std_r = np.sqrt(v_f_r.transpose().diagonal()).reshape(-1, 1)
+    x = np.array(data3['dt2']).reshape(-1, 1) / 100
+    y = np.array(data3['dw_mean']).reshape(-1, 1) / std_quad
 
-    gp_rg_l = gp_regressor.GP_regressor(x_l, y_l, x_test_l, **params)
-    f_l_mean, v_f_l, lp = gp_rg_l.fit()
-    std_l = np.sqrt(v_f_l.transpose().diagonal()).reshape(-1, 1)
+    # Find the min and max of x for negative dt and postive dt
+    x_neg_min, x_neg_max = np.min(data3[data3['dt2'] < 0]['dt2']) / 100, np.max(data3[data3['dt2'] < 0]['dt2']) / 100
+    x_posi_min, x_posi_max = np.min(data3[data3['dt2'] > 0]['dt2']) / 100, np.max(data3[data3['dt2'] > 0]['dt2']) / 100
+
+    x_aug = np.concatenate([np.linspace(x_neg_min, x_neg_max, 100),
+                            np.linspace(x_posi_min, x_posi_max, 100)]).reshape(-1, 1)
+
+    # Use Gaussian regressor that have been validated using hyper-parameter
+    gp_rg = gp_regressor.GP_regressor(x, y, x_aug, **params)
+    f_mean, v_f, lp = gp_rg.fit(y_bias=0)
 
     # Sample from the gp regression
-    f_l_samp = gp_rg_l.sample(1)*scaler
-    f_r_samp = gp_rg_r.sample(1)*scaler
+    f_samp = np.diagonal(gp_rg.sample(x_aug.shape[0])) * std_quad
+
     """
     f_l_samp = np.zeros(f_l_mean.shape)
     f_r_samp = np.zeros(f_r_mean.shape)
@@ -117,7 +128,7 @@ def quad_gp(random_state=0, **params):
         noise = np.random.normal(loc=0, scale=scale, size=1)
         f_r_samp[i] = f_r_mean[i] + noise
     """
-    return x_test_r, f_r_samp.reshape(-1,1), x_test_l, f_l_samp.reshape(-1,1), x_test, y_test.reshape(-1,1)
+    return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1)
 
 def quad_dw_gen(dt, df_ori=None):
     """

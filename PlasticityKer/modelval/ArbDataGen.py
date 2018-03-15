@@ -268,7 +268,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
                                                 input_name=gen_tripnet.inputs)
 
             # generate targets through evaluating the prediction of the network
-            targets = np.zeros(spk_pairs.shape[0]).reshape(-1,1)
+            targets = np.zeros(spk_pairs.shape[0]).reshape(-1, 1)
             k = 0
             while k * batch_size < spk_pairs.shape[0]:
                 targets[k*batch_size:(k+1)*batch_size] = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs[k*batch_size:(k+1)*batch_size,:,:])

@@ -72,8 +72,7 @@ def conv_net(x_pre, x_post, n_labels, data_len, weights, bias):
     return output
 
 # Generate kernel based on Gerstner's parameter
-# Generate kernel with designated shape
-# define 3 exponential decay kernel with different time constant
+# Generated shifted kernel for network using non-shifted spike trains
 def ker_gen_shift(a, tau, reso_set=1, len_ker=401):
     tau_pre_post = tau[0]/reso_set  # ms
     tau_post_pre = tau[2]/reso_set # ms
@@ -85,47 +84,45 @@ def ker_gen_shift(a, tau, reso_set=1, len_ker=401):
     x1 = np.linspace(0, half_pt, half_pt)
     x2 = np.linspace(0, half_shift, half_shift)
     
-    ker_pre_post = np.zeros([len_ker,1])
-    ker_post_pre = np.zeros([len_ker,1])
-    ker_post_post = np.zeros([len_ker,1])
+    ker_pre_post = np.zeros([len_ker, 1])
+    ker_post_pre = np.zeros([len_ker, 1])
+    ker_post_post = np.zeros([len_ker, 1])
 
-    # ker_pre_post[25] = 1
-    # ker_post_pre[25] = 1
-    # ker_post_post[25] = 1
 
     ker_pre_post[:half_pt] =  a[0] * exp_ker(x1, tau_pre_post, half_pt).reshape([half_pt,1])
     ker_post_pre[:half_pt] = a[2] * exp_ker(x1, tau_post_pre, half_pt).reshape([half_pt,1])
+
     if a[0] > 1e-10:
         ker_post_post[:half_shift] = a[3]/a[0] * exp_ker(x2, tau_post_post,half_shift).reshape([half_shift,1])/ np.exp(-1/tau_pre_post)
     else:
         ker_post_post[:half_shift] = a[3] * exp_ker(x2, tau_post_post, half_shift).reshape([half_shift,1])
     return ker_pre_post, ker_post_pre, ker_post_post, len_ker
 
+# Generated shifted kernel for network using non-shifted spike trains
 def ker_gen(a, tau, reso_set=1, len_ker=401):
     tau_pre_post = tau[0]/reso_set  # ms
     tau_post_pre = tau[2]/reso_set # ms
     tau_post_post = tau[3]/reso_set # ms
     
-    half_pt = int((len_ker - 1)/2+1)
+    half_pt = int((len_ker - 1)/2)
     
-    x1 = np.linspace(0, half_pt, half_pt)
+    x1 = np.linspace(0, half_pt, half_pt+1)
     
-    ker_pre_post = np.zeros([len_ker,1])
-    ker_post_pre = np.zeros([len_ker,1])
-    ker_post_post = np.zeros([len_ker,1])
+    ker_pre_post = np.zeros([len_ker, 1])
+    ker_post_pre = np.zeros([len_ker, 1])
+    ker_post_post = np.zeros([len_ker, 1])
 
-    # ker_pre_post[25] = 1
-    # ker_post_pre[25] = 1
-    # ker_post_post[25] = 1
+    ker_pre_post[:half_pt+1] = a[0] * exp_ker(x1, tau_pre_post, half_pt).reshape([half_pt+1, 1])
+    ker_post_pre[:half_pt+1] = a[2] * exp_ker(x1, tau_post_pre, half_pt).reshape([half_pt+1, 1])
 
-    ker_pre_post[:half_pt] =  a[0] * exp_ker(x1, tau_pre_post, half_pt).reshape([half_pt,1])
-    ker_post_pre[:half_pt] = a[2] * exp_ker(x1, tau_post_pre, half_pt).reshape([half_pt,1])
     if a[0] > 1e-10:
-        ker_post_post[:half_pt] = a[3]/a[0] * exp_ker(x1, tau_post_post,half_pt).reshape([half_pt,1])
+        ker_post_post[:half_pt+1] = a[3]/a[0] * exp_ker(x1, tau_post_post, half_pt).reshape([half_pt+1, 1])
     else:
-        ker_post_post[:half_pt] = a[3] * exp_ker(x1, tau_post_post, half_pt).reshape([half_pt,1])
+        ker_post_post[:half_pt+1] = a[3] * exp_ker(x1, tau_post_post, half_pt).reshape([half_pt+1, 1])
+
     return ker_pre_post, ker_post_pre, ker_post_post, len_ker
 
-def exp_ker(x, tau,length):
+
+def exp_ker(x, tau, length):
     z = np.exp(-(length - x)/tau)
     return z

@@ -174,7 +174,7 @@ class PairNet(object):
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, kernel_scale=np.ones((3, 1)), reg_scale=(1, 1), init_seed=(0, 1, 2, 3)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(1, 1), init_seed=(0, 1, 2, 3)):
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init, reg_scale=reg_scale, init_seed=init_seed)
         """
         Create and build the PairNet
@@ -202,8 +202,8 @@ class TripNet(PairNet):
             # Apply mask to train only half of the kernel 
             mask = np.zeros(shape=[kernel_len, 1])
             mask2 = np.zeros(shape=[kernel_len, 1])
-            mask[:int((kernel_len-1)/2),0]=1
-            mask2[:int((kernel_len-1)/2)+1,0]=1
+            mask[:int((kernel_len-1)/2), 0] = 1
+            mask2[:int((kernel_len-1)/2)+1, 0] = 1
             
             if self.ground_truth_init:  # Not in training mode
                 self.kernel_pre = tf.get_variable(shape=self.kernel_pre_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_pre_const),
@@ -211,13 +211,13 @@ class TripNet(PairNet):
                 self.kernel_pre = tf.multiply(self.kernel_pre, mask2)
                 self.kernel_post = tf.get_variable(shape=self.kernel_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_const),
                                                    name='const_post_kernel')
-                self.kernel_post = tf.multiply(self.kernel_post, mask)
+                self.kernel_post = tf.multiply(self.kernel_post, mask2)
                 self.kernel_post_post = tf.get_variable(shape=self.kernel_post_post_const.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_post_post_const),
                                                    name='const_post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask2)
                 self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_scale),
                                                    name='const_fully_connect_weights')
-                self.bias = tf.get_variable(shape=len(self.kernel_bias), dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_bias),
+                self.bias = tf.get_variable(shape=self.kernel_bias.shape, dtype=tf.float32, initializer=tf.constant_initializer(self.kernel_bias),
                                                    name='const_bias')
             else:
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],

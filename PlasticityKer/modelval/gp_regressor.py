@@ -108,7 +108,7 @@ class GP_regressor(object):
 
         return K
 
-    def sample(self, n_samples, cov = None, sample_reso=1, seed=None):
+    def sample(self, n_samples, cov=None, sample_reso=1, seed=0):
         """
         Sample at x_test
         :param n_samples: number of repeated samples to generate
