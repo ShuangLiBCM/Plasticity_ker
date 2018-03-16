@@ -6,7 +6,7 @@ import numpy as np
 class KernelGen(object):
 
     def __init__(self, tau_left=100, tau_right=20, scale_left=1, scale_right=1, scale=1, side='right', tau=20,
-                 reso_kernel=2, len_kernel=101, bias=0, kernel_scale=None):
+                 reso_kernel=2, len_kernel=101, len_trip=101, bias=0, kernel_scale=None):
         """
         Created and build the kernel
         :param tau_left: exponential decay tau for left side of kernel
@@ -18,6 +18,8 @@ class KernelGen(object):
         """
         self.reso_kernel = reso_kernel
         self.len_kernel = len_kernel
+        self.len_pair = len_kernel
+        self.len_trip = len_trip
         self.x = np.linspace(-1 * (self.len_kernel-1)/2, (self.len_kernel-1)/2 + 1, self.len_kernel) * self.reso_kernel
         self.kernel = np.zeros(self.len_kernel)
         self.tau_left = tau_left
@@ -113,6 +115,7 @@ class KernelGen(object):
         Generate pre, post and postpost kernel based on Gerstner's paper
         :param para: parameter of the model
         """
+
         a = para[:4].values
         tau = para[4:].values
         reso_set = 2
@@ -120,13 +123,13 @@ class KernelGen(object):
         tau_post_pre = tau[2] / reso_set  # ms
         tau_post_post = tau[3] / reso_set  # ms
 
-        self.kernel_pre = self.uni_exp_ker(side='left', tau=tau_pre_post, scale=1, shift=-1)
+        self.kernel_pre = self.uni_exp_ker(len_kernel=self.len_pair, side='left', tau=tau_pre_post, scale=1, shift=-1)
         ker_pre_norm = np.linalg.norm(self.kernel_pre, ord=2)
         self.kernel_pre = self.kernel_pre / ker_pre_norm
-        self.kernel_post = self.uni_exp_ker(side='left', tau=tau_post_pre, scale=1, shift=-1)
+        self.kernel_post = self.uni_exp_ker(len_kernel=self.len_pair, side='left', tau=tau_post_pre, scale=1, shift=-1)
         ker_post_norm = np.linalg.norm(self.kernel_post, ord=2)
         self.kernel_post = self.kernel_post / ker_post_norm
-        self.kernel_post_post = self.uni_exp_ker(side='left', tau=tau_post_post, scale=1, shift=-1)
+        self.kernel_post_post = self.uni_exp_ker(len_kernel=self.len_trip, side='left', tau=tau_post_post, scale=1, shift=-1)
         ker_post_post_norm = np.linalg.norm(self.kernel_post_post, ord=2)
         self.kernel_post_post = self.kernel_post_post / ker_post_post_norm
         

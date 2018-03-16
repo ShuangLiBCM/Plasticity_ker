@@ -108,7 +108,7 @@ class Trainer(object):
                 x_vali_batch, y_vali_batch = vali_data.batch(batch_size)
                 fd = self.make_feed_dict(x_vali_batch, y_vali_batch, feed_dict=feed_dict)
                 vali_loss = sess.run(self.loss, feed_dict=fd)
-                print('\nInitial validation cost=%.5f' % vali_loss, flush=True)
+                print('\nInitial validation mse=%.5f' % vali_loss, flush=True)
                 self.mini_vali_loss = vali_loss
                 self.save_best()
                 self.save(0)    # Save the initial model
@@ -133,7 +133,7 @@ class Trainer(object):
                     fd = self.make_feed_dict(x_vali_batch, y_vali_batch, feed_dict=feed_dict)
                     vali_loss = sess.run(self.loss, feed_dict=fd)
                     self.loss_tracker.append([train_loss, vali_loss])
-                    print('Global Step %04d and Step %04d: validation cost=%.5f' % (global_step, step, vali_loss), flush=True)
+                    print('Global Step %04d and Step %04d: validation mse=%.5f' % (global_step, step, vali_loss), flush=True)
 
                     # Perform early stopping
                     if (min_error < 0) | (vali_loss > min_error):

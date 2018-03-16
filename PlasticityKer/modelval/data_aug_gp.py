@@ -222,7 +222,16 @@ def triplet_dw_gen(n_samples=20):
     y_train = np.concatenate([y_train2, y_train4])
 
     data_test_gen = pd.concat([data2_test_gen, data4])
-    y_test = np.concatenate([y_test2, data4['dw_mean'].reshape(-1,1)])
+    y_test = np.concatenate([y_test2, data4['dw_mean'].reshape(-1, 1)])
     
-    return data_train_gen, y_train.reshape(-1,1), data_test_gen, y_test.reshape(-1, 1)
+    return data_train_gen, y_train.reshape(-1, 1), data_test_gen, y_test.reshape(-1, 1)
 
+def smooth(x, width=10, width_list=None):
+    y = np.zeros(x.shape)
+    if width_list is None:
+        for i in range(x.shape[0]):
+            y[i] = np.mean(x[np.max([0, i-int(width/2)]):np.min([x.shape[0], i+int(width/2)])])
+    else:
+        for i in range(x.shape[0]):
+            y[i] = np.mean(x[np.max([0, i-int(width_list[i])]):np.min([x.shape[0], i+int(width_list[i])])])
+    return y
