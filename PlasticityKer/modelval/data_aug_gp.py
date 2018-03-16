@@ -53,7 +53,7 @@ def stdp_gp(random_state=0, **params):
     # plt.plot(x_aug, f, label='Mean function')
     #
     # plt.legend(loc='upper left')
-    return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1)
+    return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1), f_mean * std_stdp
 
 def STDP_dw_gen(dt, df_ori=None):
     """
@@ -128,7 +128,7 @@ def quad_gp(random_state=0, **params):
         noise = np.random.normal(loc=0, scale=scale, size=1)
         f_r_samp[i] = f_r_mean[i] + noise
     """
-    return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1)
+    return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1), f_mean * std_quad
 
 def quad_dw_gen(dt, df_ori=None):
     """
@@ -153,7 +153,7 @@ def quad_dw_gen(dt, df_ori=None):
 
     return df
 
-def triplet_dw_gen(dt=None, n_samples=20):
+def triplet_dw_gen(n_samples=20):
 
     # Obtain data from triplet protocol
 
@@ -173,12 +173,20 @@ def triplet_dw_gen(dt=None, n_samples=20):
     data2_train_gen = pd.DataFrame(data=None, columns=list(data2.columns))
     for i in range(len(dt_choices)):
         new_entry = data2[data2['dt1'] == dt_choices[i]].iloc[0]
-        sample = np.random.normal(loc=data2_train[data2_train['dt1']==dt_choices[i]]['dw_mean'].mean(), scale=data2_train[data2_train['dt1']==dt_choices[i]]['dw_mean'].std()/np.sqrt(len(data2_train[data2_train['dt1']==dt_choices[i]])), size=n_samples) 
-        for j in range(n_samples):
-            new_entry['dt1']
-            new_entry['dw_mean'] = sample[j]
+        data_mean = data2_train[data2_train['dt1'] == dt_choices[i]]['dw_mean'].mean()
+        data_size = len(data2_train[data2_train['dt1'] == dt_choices[i]])
+        data_scale = data2_train[data2_train['dt1'] == dt_choices[i]]['dw_mean'].std()/np.sqrt(data_size)
+        if n_samples > 1:
+            sample = np.random.normal(loc=data_mean, scale=data_scale, size=n_samples)
+
+            for j in range(n_samples):
+                new_entry['dw_mean'] = sample[j]
+                data2_train_gen = data2_train_gen.append(new_entry, ignore_index=True)
+        else:
+            sample = data_mean
+            new_entry['dw_mean'] = sample
             data2_train_gen = data2_train_gen.append(new_entry, ignore_index=True)
-    
+
     y_train2 = np.array(data2_train_gen['dw_mean']).reshape(-1, 1)
     
     # Use the raw data as the testing data
@@ -194,10 +202,18 @@ def triplet_dw_gen(dt=None, n_samples=20):
     
     # pdb.set_trace()
     for i in range(len(dt_choices1)):
-        new_entry = data4[(data4['dt1'] == dt_choices1[i])&(data4['dt2'] == dt_choices2[i])]
-        sample = np.random.normal(loc=new_entry['dw_mean'], scale=new_entry['dw_ste'], size=n_samples)
-        for j in range(n_samples):
-            new_entry['dw_mean'] = sample[j]
+        new_entry = data4[(data4['dt1'] == dt_choices1[i]) & (data4['dt2'] == dt_choices2[i])]
+        data_mean = new_entry['dw_mean']
+        data_scale = new_entry['dw_ste']
+
+        if n_samples > 1:
+            sample = np.random.normal(loc=data_mean, scale=data_scale, size=n_samples)
+            for j in range(n_samples):
+                new_entry['dw_mean'] = sample[j]
+                data4_train_gen = data4_train_gen.append(new_entry, ignore_index=True)
+        else:
+            sample = data_mean
+            new_entry['dw_mean'] = sample
             data4_train_gen = data4_train_gen.append(new_entry, ignore_index=True)
 
     y_train4 = np.array(data4_train_gen['dw_mean']).reshape(-1, 1)
@@ -208,4 +224,5 @@ def triplet_dw_gen(dt=None, n_samples=20):
     data_test_gen = pd.concat([data2_test_gen, data4])
     y_test = np.concatenate([y_test2, data4['dw_mean'].reshape(-1,1)])
     
-    return data_train_gen, y_train.reshape(-1,1), data_test_gen, y_test.reshape(-1,1)
+    return data_train_gen, y_train.reshape(-1,1), data_test_gen, y_test.reshape(-1, 1)
+

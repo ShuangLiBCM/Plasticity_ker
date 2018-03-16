@@ -44,7 +44,8 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         mean_dt = int(ptl.dt1 / spk_reso)
         # Generate noise
         if if_noise:
-            between_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_pre.shape).astype(int)
+            # Choose mean_dt as 2 * std
+            between_noise = np.random.normal(loc=0.0, scale=np.abs(mean_dt/2), size=spk_time_pre.shape).astype(int)
 
             for i in range(len(between_noise)):
                 if np.abs(between_noise[i]) >= np.abs(mean_dt):
@@ -63,11 +64,12 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         # Obtain time index of spike
         if if_noise:
             spk_time_post = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
-            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 1]), size=spk_time_post.shape).astype(int)
+            between_noise1 = np.random.normal(loc=0.0, scale=np.abs(mean_dt1/2), size=spk_time_post.shape).astype(int)
             
             for i in range(len(between_noise1)):
                 # triplet data is limited, prevent the possibility for over-interpolation, especially for small dt.
-                if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1), np.abs(mean_dt2)])) | (np.abs(mean_dt1 + between_noise1[i]) <= 1) | (np.abs(mean_dt2 + between_noise1[i]) <= 1):
+                if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1), np.abs(mean_dt2)]))\
+                        | (np.abs(mean_dt1 + between_noise1[i]) <= 1) | (np.abs(mean_dt2 + between_noise1[i]) <= 1):
                     between_noise1[i] = 0
 
             # For triplet model, create symmetric noise
@@ -87,9 +89,9 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         # Obtain time index of spike
         if if_noise:
             spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
-            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt1/2), 1]), size=spk_time_pre.shape).astype(int)
+            between_noise1 = np.random.normal(loc=0.0, scale=np.abs(mean_dt1/2), size=spk_time_pre.shape).astype(int)
             for i in range(len(between_noise1)):
-                if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1),np.abs(mean_dt2)]))|(np.abs(mean_dt1 + between_noise1[i])<=1)|(np.abs(mean_dt2 + between_noise1[i])<=1):
+                if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1), np.abs(mean_dt2)]))|(np.abs(mean_dt1 + between_noise1[i])<=1)|(np.abs(mean_dt2 + between_noise1[i])<=1):
                     between_noise1[i] = 0
                     
             spk_time_post1 = spk_time_pre - mean_dt1 + between_noise1
@@ -106,38 +108,37 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
     elif (int(ptl.pre_spk_num) == 2) & (int(ptl.post_spk_num) == 2):
         spk_time_base1 = np.random.randint(min_bef, rep_interval - min_bef, 1)
         mean_dt = int(ptl.dt2/spk_reso)
+
         time_max = 90//spk_reso
         time_min = 5//spk_reso
+
         if if_noise:
+            # mean_dt is large, choose a small value in case the variability is too large
+
             within_noise = np.random.normal(loc=0.0, scale=np.min([np.abs(mean_dt/2), 2]), size=spk_time_base1.shape).astype(int)
-            # Eliminate the possibilities for over-interpolation < 10ms or > 90 ms, where data is limited.
-            if (np.abs(within_noise) < np.abs(mean_dt)) & (np.abs(mean_dt) + within_noise > time_min) & (np.abs(mean_dt) + within_noise <= time_max):
+            # Eliminate the possibilities for over-interpolation < 5 ms or > 50 ms, where data is limited.
+            if (np.abs(within_noise) < np.abs(mean_dt)) & (np.abs(mean_dt) + within_noise > time_min) & \
+                    (np.abs(mean_dt) + within_noise <= time_max):
                 spk_time_base2 = spk_time_base1 + np.abs(mean_dt) + within_noise
             else:
-                if np.abs(mean_dt) < time_max:
-                    spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
-                else:
-                    spk_time_base2 = spk_time_base1 + time_max
+                spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
+            #     if np.abs(mean_dt) < time_max:
+            #         spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
+            #     else:
+            #         spk_time_base2 = spk_time_base1 + time_max
+            # print(spk_time_base2 - spk_time_base1)
         else:
             if np.abs(mean_dt) < time_max:
                 spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
             else:
                 spk_time_base2 = spk_time_base1 + time_max
         
-        if ptl.dt2 ==0:
+        if ptl.dt2 == 0:
             ptl.dt2 = -1
             
         if ptl.dt2 < 0:  # Pre-post-post-pre
             spk_time_post1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_post2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
-            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt1 / spk_reso), 2]),
-                                              size=spk_time_post1.shape).astype(int)
-
-            for i in range(len(between_noise1)):
-                if np.abs(between_noise1[i]) >= np.abs(ptl.dt1/spk_reso):
-                    between_noise1[i] = 0
-
-            betwee_noise2 = -1 * between_noise1
 
             spk_time_pre1 = spk_time_post1 - int(ptl.dt1 / spk_reso)
             spk_time_pre2 = spk_time_post2 - int(ptl.dt3 / spk_reso)
@@ -147,13 +148,6 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         elif ptl.dt2 > 0:   # Post-pre-pre-post
             spk_time_pre1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_pre2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
-            between_noise1 = np.random.normal(loc=0.0, scale=np.min([np.abs(ptl.dt1 / spk_reso), 2]),
-                                              size=spk_time_pre1.shape).astype(int)
-            for i in range(len(between_noise1)):
-                if np.abs(between_noise1[i]) >= np.abs(ptl.dt1/spk_reso):
-                    between_noise1[i] = 0
-
-            betwee_noise2 = -1 * between_noise1
 
             spk_time_post1 = spk_time_pre1 - int(ptl.dt1 / spk_reso)
             spk_time_post2 = spk_time_pre2 - int(ptl.dt3 / spk_reso)
