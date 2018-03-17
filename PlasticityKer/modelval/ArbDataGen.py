@@ -24,8 +24,15 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
     if spk_len is None:
         spk_len = train_len//spk_reso * 1000     # spk_reso is in msec
 
-    spk_pair = np.zeros((spk_len, 2))
-
+    spk_pair = np.zeros((spk_len+2, 2))
+    
+    # Convert protocl number into dummy variable
+    ptl_indicator = np.zeros((4))
+    ptl_indicator[int(ptl.ptl_idx-1)] = 1
+    
+    spk_pair[-2:,0] = ptl_indicator[:2]
+    spk_pair[-2:,1] = ptl_indicator[2:]
+    
     rep_interval = int(np.floor(1000 / ptl.ptl_freq / spk_reso))
     rep_num = int(np.floor(train_len * ptl.ptl_freq))
 
@@ -128,10 +135,11 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             #         spk_time_base2 = spk_time_base1 + time_max
             # print(spk_time_base2 - spk_time_base1)
         else:
-            if np.abs(mean_dt) < time_max:
-                spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
-            else:
-                spk_time_base2 = spk_time_base1 + time_max
+            spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
+            #if np.abs(mean_dt) < time_max:
+            #    spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
+            #else:
+            #    spk_time_base2 = spk_time_base1 + time_max
         
         if ptl.dt2 == 0:
             ptl.dt2 = -1

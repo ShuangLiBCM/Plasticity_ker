@@ -190,12 +190,13 @@ class PairNet(object):
     
 # ==============================================================================================
 
-
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(1, 1, 1), len_scale=21, init_seed=(0, 1, 2, 3)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(1, 1, 1), len_scale=21, dataset_num=4,
+                 init_seed=(0, 1, 2, 3)):
 
         self.len_scale = len_scale
+        self.dataset_num = dataset_num
 
         super(TripNet, self).__init__(kernel=kernel, n_input=n_input, ground_truth_init=ground_truth_init,
                                       reg_scale=reg_scale, init_seed=init_seed)
@@ -216,7 +217,14 @@ class TripNet(PairNet):
         with self.graph.as_default():
 
             self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.n_input, 2], name='inputs')
-            self.x_pre, self.x_post = tf.unstack(self.inputs, axis=2)
+            
+            # Use last 2 digits of input spike pairs as protocol indicator
+            self.x_pre, self.x_post = tf.unstack(self.inputs[:,:-2,:], axis=2)
+            self.dataset_type = tf.concat(tf.unstack(self.inputs[:,-2:,:], axis=2), axis=1)
+            
+            # Enable the dataset specific scaler and bias
+            # self.dataset_type = tf.placeholder(dtype=tf.float32, shape=[None, self.dataset_num], name='dataset_type')
+
             # Shift the spike trains instead of kernel
             self.x_post_post = tf.concat([self.x_post[:, 1:], tf.expand_dims(self.x_post[:, 0], axis=1)], axis=1)
             self.target = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='target')
@@ -263,10 +271,9 @@ class TripNet(PairNet):
                 self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[len_trip, 1],
                                                         initializer=self.random_init(self.init_seed[2]), name='post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask3)
-
                 self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
-                self.bias = tf.Variable(0, dtype=tf.float32, name='bias')
+                self.bias = tf.Variable(tf.zeros(shape=[self.dataset_num, 1]), dtype=tf.float32, name='bias')
 
             self.hp_ker = tf.get_variable(name='hp_ker', shape=[3, 1],
                                           initializer=tf.constant_initializer(np.array([1, -2, 1]).reshape(-1, 1)))
@@ -282,7 +289,8 @@ class TripNet(PairNet):
 
             self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2, self.trip_term], axis=1)
 
-            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1)) + self.bias
+            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1)) \
+                              + tf.matmul(self.dataset_type, self.bias)
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
 
