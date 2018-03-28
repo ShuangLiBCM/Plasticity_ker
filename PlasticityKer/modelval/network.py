@@ -56,7 +56,8 @@ class PairNet(object):
         self.kernel_pre_const = kernel.kernel_pre
         self.kernel_post_const = kernel.kernel_post
         self.kernel_post_post_const = kernel.kernel_post_post
-        self.kernel_scale = kernel.kernel_scale
+        self.kernel_fc = kernel.kernel_scale
+        self.kernel_scaler = kernel.scale
         self.kernel_bias = kernel.bias
         self.reg_scale = reg_scale
         self.ground_truth_init = ground_truth_init
@@ -123,8 +124,8 @@ class PairNet(object):
             l2_normalization = (self.l2_loss_unit(self.kernel_pre) + self.l2_loss_unit(self.kernel_post))/2
 
             # Reduce oscillation of the kernel
-            hp_l2_loss = (self.l2_loss(self.kernel_hp(self.kernel_pre))
-                          + self.l2_loss(self.kernel_hp(self.kernel_post)))/2
+            hp_l2_loss = (self.l2_loss(self.kernel_hp1(self.kernel_pre))
+                          + self.l2_loss(self.kernel_hp1(self.kernel_post)))/2
 
             self.loss = self.mse + self.alpha_l2 * l2_normalization + self.alpha_l1 * hp_l2_loss
 
@@ -165,6 +166,9 @@ class PairNet(object):
     
     def l2_loss_unit(self, kernel_raw):
         return tf.square(tf.norm(kernel_raw, ord=2) - 1)
+
+    def l1_loss(self, kernel_raw):
+        return tf.norm(kernel_raw, ord=1)
     
     def kernel_hp1(self, w):
         """
@@ -192,8 +196,8 @@ class PairNet(object):
 
 class TripNet(PairNet):
 
-    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(1, 1, 1), len_scale=21, dataset_num=4,
-                 init_seed=(0, 1, 2, 3)):
+    def __init__(self, kernel=None, n_input=None, ground_truth_init=1, reg_scale=(1, 1, 1, 1), len_scale=21, dataset_num=4,
+                 init_seed=(0, 1, 2, 3, 4)):
 
         self.len_scale = len_scale
         self.dataset_num = dataset_num
@@ -243,6 +247,7 @@ class TripNet(PairNet):
             mask3[:int((len_trip - 1)/2)+1, 0] = 1
             
             if self.ground_truth_init:  # Not in training mode
+
                 self.kernel_pre = tf.get_variable(shape=self.kernel_pre_const.shape, dtype=tf.float32,
                                                   initializer=tf.constant_initializer(self.kernel_pre_const),
                                                   name='const_pre_kernel')
@@ -255,12 +260,15 @@ class TripNet(PairNet):
                                                         initializer=tf.constant_initializer(self.kernel_post_post_const),
                                                         name='const_post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask3)
-                self.fc_w = tf.get_variable(shape=self.kernel_scale.shape, dtype=tf.float32,
-                                            initializer=tf.constant_initializer(self.kernel_scale),
+                self.fc_w = tf.get_variable(shape=self.kernel_fc.shape, dtype=tf.float32,
+                                            initializer=tf.constant_initializer(self.kernel_fc),
                                             name='const_fully_connect_weights')
                 self.bias = tf.get_variable(shape=self.kernel_bias.shape, dtype=tf.float32,
                                             initializer=tf.constant_initializer(self.kernel_bias),
                                             name='const_bias')
+                self.scaler = tf.get_variable(shape=self.kernel_scaler.shape, dtype=tf.float32,
+                                            initializer=tf.constant_initializer(self.kernel_scaler),
+                                            name='scaler')
             else:
                 self.kernel_pre = tf.get_variable(dtype=tf.float32, shape=[kernel_len, 1],
                                                   initializer=self.random_init(self.init_seed[0]), name='pre_kernel')
@@ -271,9 +279,11 @@ class TripNet(PairNet):
                 self.kernel_post_post = tf.get_variable(dtype=tf.float32, shape=[len_trip, 1],
                                                         initializer=self.random_init(self.init_seed[2]), name='post_post_kernel')
                 self.kernel_post_post = tf.multiply(self.kernel_post_post, mask3)
-                self.fc_w =tf.get_variable(dtype=tf.float32, shape=self.kernel_scale.shape,
+                self.fc_w = tf.get_variable(dtype=tf.float32, shape=self.kernel_fc.shape,
                                            initializer=self.random_init(self.init_seed[3]), name='fully_connect_weights')
                 self.bias = tf.Variable(tf.zeros(shape=[self.dataset_num, 1]), dtype=tf.float32, name='bias')
+                self.scaler = tf.get_variable(dtype=tf.float32, shape=[self.dataset_num, 1],
+                                           initializer=self.random_init(self.init_seed[4]), name='scaler')
 
             self.hp_ker = tf.get_variable(name='hp_ker', shape=[3, 1],
                                           initializer=tf.constant_initializer(np.array([1, -2, 1]).reshape(-1, 1)))
@@ -289,14 +299,18 @@ class TripNet(PairNet):
 
             self.terms = tf.concat([self.pair_term1, -1 * self.pair_term2, self.trip_term], axis=1)
 
-            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1)) \
-                              + tf.matmul(self.dataset_type, self.bias)
+            self.prediction = tf.matmul(self.terms, tf.expand_dims(self.fc_w, axis=1)) * \
+                              tf.matmul(self.dataset_type, self.scaler) + tf.matmul(self.dataset_type, self.bias)
 
             self.mse = tf.reduce_mean(tf.square(self.prediction - self.target))
 
             # Enforce l2 norm of each kernel to be 1, promote the unit learning of fc layer.
-            l2_normalization = (self.l2_loss_unit(self.kernel_pre)+self.l2_loss_unit(self.kernel_post) +
-                                self.l2_loss_unit(self.kernel_post_post))/3
+            l1_normalization = (self.l1_loss(self.kernel_pre[:int((kernel_len-1)/4)])+self.l1_loss(self.kernel_post[:int((kernel_len-1)/4)]) +
+                                self.l1_loss(self.kernel_post_post[:int((len_trip - 1)/4)]))/3
+
+            # Enforce l2 norm of each kernel to be 1, promote the unit learning of fc layer.
+            l2_normalization = (self.l2_loss_unit(self.kernel_pre) + self.l2_loss_unit(self.kernel_post) +
+                                self.l2_loss_unit(self.kernel_post_post)) / 3
 
             # Use edge detection filter to remove high frequency oscillation
             hp_pre = self.kernel_hp1(self.kernel_pre)
@@ -310,8 +324,5 @@ class TripNet(PairNet):
             hp_post_post2 = self.kernel_hp2(self.kernel_post_post, len=self.len_scale)
             hp_loss2 = (self.l2_loss(hp_pre2) + self.l2_loss(hp_post2) + self.l2_loss(hp_post_post2)) / 3
 
-            self.alpha_l1 = self.reg_scale[0]
-            self.alpha_l2 = self.reg_scale[1]
-            self.alpha_l3 = self.reg_scale[2]
-
-            self.loss = self.mse + self.alpha_l1 * l2_normalization + self.alpha_l2 * hp_loss1 + self.alpha_l3 * hp_loss2
+            self.loss = self.mse + self.reg_scale[0] * l1_normalization + self.reg_scale[1] * l2_normalization \
+                        + self.reg_scale[2] * hp_loss1 + self.reg_scale[3] * hp_loss2

@@ -34,8 +34,9 @@ class KernelGen(object):
         self.kernel_post_post = self.uni_exp_ker()
         self.dot_ker = self.dot_ker()
         self.kernel_scale = kernel_scale
-        self.bias = np.reshape(bias, (-1,1))
-        
+        self.bias = np.reshape(bias, (-1, 1))
+        self.scaler = np.reshape(scale, (-1, 1))
+
     def bi_exp_ker(self, len_kernel=None):
         """
             Implement bilateral exponential decay kernel
