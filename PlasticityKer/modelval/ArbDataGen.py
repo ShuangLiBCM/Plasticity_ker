@@ -2,7 +2,10 @@
     Functions for generating spike train from pairing ptl
 """
 import numpy as np
-from modelval import pairptl, network, trainer
+from modelval import pairptl, network, trainer, data_aug_gp
+from sklearn.model_selection import KFold
+import Pandas as pd
+
 import pdb
 
 def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
@@ -25,26 +28,26 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         spk_len = train_len//spk_reso * 1000     # spk_reso is in msec
 
     spk_pair = np.zeros((spk_len+2, 2))
-    
+
     # Convert protocl number into dummy variable
     ptl_indicator = np.zeros((4))
     ptl_indicator[int(ptl.ptl_idx-1)] = 1
-    
+
     spk_pair[-2:,0] = ptl_indicator[:2]
     spk_pair[-2:,1] = ptl_indicator[2:]
-    
+
     rep_interval = int(np.floor(1000 / ptl.ptl_freq / spk_reso))
     rep_num = int(np.floor(train_len * ptl.ptl_freq))
 
     # Consider the max dt = 120 ms
     min_bef = int(120//spk_reso + 1)
-    
+
     if seed is not None:
         np.random.seed(seed)
 
     # pre-post: 1-1
     if (int(ptl.pre_spk_num) == 1) & (int(ptl.post_spk_num) == 1):
-            
+
         spk_time_base = np.random.randint(min_bef, rep_interval - min_bef, 1)
         # Obtain time index of spike
         spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
@@ -72,7 +75,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
         if if_noise:
             spk_time_post = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
             between_noise1 = np.random.normal(loc=0.0, scale=np.abs(mean_dt1/2), size=spk_time_post.shape).astype(int)
-            
+
             for i in range(len(between_noise1)):
                 # triplet data is limited, prevent the possibility for over-interpolation, especially for small dt.
                 if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1), np.abs(mean_dt2)]))\
@@ -100,11 +103,11 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             for i in range(len(between_noise1)):
                 if (np.abs(between_noise1[i]) >= np.min([np.abs(mean_dt1), np.abs(mean_dt2)]))|(np.abs(mean_dt1 + between_noise1[i])<=1)|(np.abs(mean_dt2 + between_noise1[i])<=1):
                     between_noise1[i] = 0
-                    
+
             spk_time_post1 = spk_time_pre - mean_dt1 + between_noise1
             spk_time_post2 = spk_time_pre - mean_dt2 - between_noise1
             spk_time_post = np.sort(np.concatenate([spk_time_post1, spk_time_post2]))
-            
+
         else:
             spk_time_pre = np.hstack([spk_time_base + rep_interval * i for i in range(rep_num)])
             spk_time_post1 = spk_time_pre - mean_dt1
@@ -140,10 +143,10 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
             #    spk_time_base2 = spk_time_base1 + np.abs(mean_dt)
             #else:
             #    spk_time_base2 = spk_time_base1 + time_max
-        
+
         if ptl.dt2 == 0:
             ptl.dt2 = -1
-            
+
         if ptl.dt2 < 0:  # Pre-post-post-pre
             spk_time_post1 = np.hstack([spk_time_base1 + rep_interval * i for i in range(rep_num)])
             spk_time_post2 = np.hstack([spk_time_base2 + rep_interval * i for i in range(rep_num)])
@@ -191,7 +194,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
                         spk_time_post[i] = int(spk_time_pre[i] + mean_dt + between_noise[i])
         else:
             spk_time_post = spk_time_pre + mean_dt
-       
+
         # Find the same spk_time_post and seperate them
         if (np.diff(spk_time_post) == 0).any():
             spk_time_post[np.where(np.diff(spk_time_post) == 0)[0]+1] = spk_time_post[np.where(np.diff(spk_time_post) == 0)[0]+1]+1
@@ -222,7 +225,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
     :param aug_times: list number of times to augment for each member of ptl_list
     :return:
     """
-    
+
     if spk_pairs is None:
         spk_pairs = []
         target_gen = []
@@ -232,7 +235,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
         for i in range(len(ptl_list)):
             data_ptl = df[df['ptl_idx'] == ptl_list[i]]
-            
+
             if targets is not None:
                 target_tmp = targets[df['ptl_idx'] == ptl_list[i]]
 
@@ -251,7 +254,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
                 k += 1
         # Generate the spike data
         spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
-    
+
     # Get the network used to generate prediction
     if targets is None:
         if net_type == 'pair':
@@ -274,9 +277,9 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
             k = 0
             while k * batch_size < spk_pairs.shape[0]:
                 targets[k*batch_size:(k+1)*batch_size] = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs[k*batch_size:(k+1)*batch_size,:,:])
-                k+=1
+                k += 1
             targets[k*batch_size:] = gen_tripnet_train.evaluate(ops=gen_tripnet.prediction, inputs=spk_pairs[k*batch_size:,:,:])
-            
+
         else:
             print('Wrong network!!')
     else:
@@ -284,3 +287,73 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
 
     return spk_pairs, targets
+
+def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_split=5):
+
+    data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
+
+    if data_type == 'hippocampus':
+
+        if data_aug == 'gp_mean':
+
+            # Generate data for STDP protocol
+            params = {'amp_kernel': 1,
+                      'length_scale': 0.1,
+                      'power_sc': 0.2,
+                      'sigma_noise': 1.0}
+
+            x_stdp, _, x_stdp_test, y_stdp_test, y_stdp = data_aug_gp.stdp_gp(test_fold=test_fold_num, **params)
+
+            kf_stdp = KFold(n_split=vali_split)
+            x_stdp_train, x_stdp_vali, y_stdp_train, y_stdp_vali = [],[],[],[]
+
+            for train_index, vali_index in kf_stdp.split(x_stdp):
+                x_stdp_train.append(x_stdp[train_index])
+                y_stdp_train.append(y_stdp[train_index])
+                x_stdp_vali.append(x_stdp[vali_index])
+                y_stdp_vali.append(y_stdp[vali_index])
+
+            # Generate data for quadruplet protocol
+            # Obtain augmented data from quadruplet protocol
+            params = {'amp_kernel': 1,
+                      'length_scale': 0.45,
+                      'power_sc': 0.4,
+                      'sigma_noise': 1.2}
+
+            x_quad, y_quad, x_quad_test, y_quad_test, _ = data_aug_gp.quad_gp(test_fold=test_fold_num, **params)
+
+            kf_quad = KFold(n_split=vali_split)
+
+            x_quad_train, x_quad_vali, y_quad_train, y_quad_vali = [], [], [], []
+
+            for train_index, vali_index in kf_quad.split(x_quad):
+                x_quad_train.append(x_quad[train_index])
+                y_quad_train.append(y_quad[train_index])
+                x_quad_vali.append(x_quad[vali_index])
+                y_quad_vali.append(y_quad[vali_index])
+
+            # Generate data for triplet protocol
+
+            # Put time information into dataframe
+            data_stdp_train = data_aug_gp.STDP_dw_gen(x_stdp_train)
+            data_stdp_vali = data_aug_gp.STDP_dw_gen(x_stdp_vali)
+            data_stdp_test = data_aug_gp.STDP_dw_gen(x_stdp_test.reshape(-1, 1))
+
+            data_quad_train = data_aug_gp.quad_dw_gen(x_quad_train)
+            data_quad_vali = data_aug_gp.quad_dw_gen(x_quad_vali)
+            data_quad_test = data_aug_gp.quad_dw_gen(x_quad_test.reshape(-1, 1))
+
+
+
+        elif data_aug == 'gp_samp':
+            pass
+        elif data_aug == 'raw_samp':
+            pass
+        else:
+            return 'Wrong augmentation!!'
+
+
+
+
+
+    return

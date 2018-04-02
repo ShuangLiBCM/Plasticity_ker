@@ -3,11 +3,10 @@ Generate STDP data, triplet and quadruplet data with Gaussian Process
 """
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from modelval import gp_regressor
 import pdb
 
-def stdp_gp(random_state=0, **params):
+def stdp_gp(random_state=0, test_fold=0, **params):
     """
     Generate augmented STDP data through sample from the GP regressor with designated parameter
     :param random_state:
@@ -19,8 +18,10 @@ def stdp_gp(random_state=0, **params):
 
     data1 = data[data['ptl_idx'] == 1]
 
-    x_train, x_test, y_train, y_test = train_test_split(data1['dt1'], data1['dw_mean'], test_size=0.2,
-                                                        random_state=random_state)
+
+
+    x_train, x_test, y_train, y_test = train_test_split(data1['dt1'], data1['dw_mean'], n_folds=5,
+                                                        test_fold=test_fold, random_state=random_state)
 
     # Fit the training data with Gaussian process
     std_stdp = data1[np.abs(data1['dt1']) > 50]['dw_mean'].std()
@@ -32,7 +33,7 @@ def stdp_gp(random_state=0, **params):
     # Use Gaussian regressor that have been validated using hyper-parameter
     gp_rg = gp_regressor.GP_regressor(x, y, x_aug, **params)
     f_mean, v_f, lp = gp_rg.fit(y_bias=0)
-    
+
     f_std = np.sqrt(v_f.transpose().diagonal()).reshape(-1, 1)
     # plt.plot(x, y, 'o', label='Raw_train_data')
 
@@ -90,8 +91,8 @@ def quad_gp(random_state=0, **params):
     data3 = data[data['ptl_idx'] == 3]
 
     # Split into training and testing set
-    x_train, x_test, y_train, y_test = train_test_split(data3['dt2'].values, data3['dw_mean'].values, test_size=0.2,
-                                                        random_state=random_state)
+    x_train, x_test, y_train, y_test = train_test_split(data3['dt2'].values, data3['dw_mean'].values, n_folds=5,
+                                                        test_fold=test_fold_num, random_state=random_state)
 
     std_quad = data3[(data3['dt2'] < -50)]['dw_mean'].std()
 
@@ -166,9 +167,9 @@ def triplet_dw_gen(n_samples=20):
     train_len = int(len(data2)*0.8)
     data2_train = data2.iloc[data2_idx[:train_len]]
     data2_test = data2.iloc[data2_idx[train_len:]]
-    
+
     dt_choices = np.array(data2_train['dt1'].value_counts().index)
-    
+
     # Sample from the mean value of the training data to fill into the data frame
     data2_train_gen = pd.DataFrame(data=None, columns=list(data2.columns))
     for i in range(len(dt_choices)):
@@ -188,18 +189,18 @@ def triplet_dw_gen(n_samples=20):
             data2_train_gen = data2_train_gen.append(new_entry, ignore_index=True)
 
     y_train2 = np.array(data2_train_gen['dw_mean']).reshape(-1, 1)
-    
+
     # Use the raw data as the testing data
     data2_test_gen = data2_test
     y_test2 = np.array(data2_test_gen['dw_mean']).reshape(-1, 1)
-    
+
     # Sample from the raw ptl 4 data as the training data
-    data4 = data[data['ptl_idx'] == 4]                     
+    data4 = data[data['ptl_idx'] == 4]
     data4_train_gen = pd.DataFrame(data=None, columns=list(data2.columns))
-    
+
     dt_choices1 = np.array(data4['dt1'].value_counts().index)
     dt_choices2 = np.array(data4['dt2'].value_counts().index)
-    
+
     # pdb.set_trace()
     for i in range(len(dt_choices1)):
         new_entry = data4[(data4['dt1'] == dt_choices1[i]) & (data4['dt2'] == dt_choices2[i])]
@@ -217,13 +218,13 @@ def triplet_dw_gen(n_samples=20):
             data4_train_gen = data4_train_gen.append(new_entry, ignore_index=True)
 
     y_train4 = np.array(data4_train_gen['dw_mean']).reshape(-1, 1)
-                                  
+
     data_train_gen = pd.concat([data2_train_gen, data4_train_gen])
     y_train = np.concatenate([y_train2, y_train4])
 
     data_test_gen = pd.concat([data2_test_gen, data4])
     y_test = np.concatenate([y_test2, data4['dw_mean'].reshape(-1, 1)])
-    
+
     return data_train_gen, y_train.reshape(-1, 1), data_test_gen, y_test.reshape(-1, 1)
 
 def smooth(x, width=10, width_list=None):
@@ -235,3 +236,19 @@ def smooth(x, width=10, width_list=None):
         for i in range(x.shape[0]):
             y[i] = np.mean(x[np.max([0, i-int(width_list[i])]):np.min([x.shape[0], i+int(width_list[i])])])
     return y
+
+def train_test_split(x, y, n_folds=5, test_fold = 0, random_state=0):
+
+    np.random.seed(random_state)
+    index = np.random.permutation(range(len(x)))
+    test_size = int(len(x)/n_folds)
+
+    test_index = index[test_fold * test_size: (test_fold+1)*test_size]
+    train_index = np.setdiff1d(index, test_index)
+
+    x_train = x[train_index]
+    x_test = x[test_index]
+    y_train = y[train_index]
+    y_test = y[test_index]
+
+    return x_train, x_test, y_train, y_test
