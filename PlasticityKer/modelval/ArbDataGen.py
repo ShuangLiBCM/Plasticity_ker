@@ -4,7 +4,7 @@
 import numpy as np
 from modelval import pairptl, network, trainer, data_aug_gp
 from sklearn.model_selection import KFold
-import Pandas as pd
+import pandas as pd
 
 import pdb
 
@@ -285,12 +285,10 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
     else:
         targets = np.vstack(target_gen)
 
-
     return spk_pairs, targets
 
-def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_split=5):
 
-    data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
+def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_split=5):
 
     if data_type == 'hippocampus':
 
@@ -304,8 +302,9 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
 
             x_stdp, _, x_stdp_test, y_stdp_test, y_stdp = data_aug_gp.stdp_gp(test_fold=test_fold_num, **params)
 
-            kf_stdp = KFold(n_split=vali_split)
-            x_stdp_train, x_stdp_vali, y_stdp_train, y_stdp_vali = [],[],[],[]
+            kf_stdp = KFold(n_splits=vali_split, shuffle=True, random_state=12)
+
+            x_stdp_train, x_stdp_vali, y_stdp_train, y_stdp_vali = [], [], [], []
 
             for train_index, vali_index in kf_stdp.split(x_stdp):
                 x_stdp_train.append(x_stdp[train_index])
@@ -320,9 +319,9 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
                       'power_sc': 0.4,
                       'sigma_noise': 1.2}
 
-            x_quad, y_quad, x_quad_test, y_quad_test, _ = data_aug_gp.quad_gp(test_fold=test_fold_num, **params)
+            x_quad, _, x_quad_test, y_quad_test, y_quad = data_aug_gp.quad_gp(test_fold=test_fold_num, **params)
 
-            kf_quad = KFold(n_split=vali_split)
+            kf_quad = KFold(n_splits=vali_split, shuffle=True, random_state=123)
 
             x_quad_train, x_quad_vali, y_quad_train, y_quad_vali = [], [], [], []
 
@@ -333,27 +332,45 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
                 y_quad_vali.append(y_quad[vali_index])
 
             # Generate data for triplet protocol
+            # Generate data for Triplet
+            dt = np.array([-10, -5, 0, 5, 10]).reshape(-1, 1)
+            data_trip, y_trip, data_trip_test, y_trip_test = data_aug_gp.triplet_dw_gen(test_fold=test_fold_num,
+                                                                                        n_samples=1)
+            # Split the triplet data into training and validation
+            kf_triplet = KFold(n_splits=vali_split, shuffle=True, random_state=456)
+            data_trip_train, data_trip_vali, y_trip_train, y_trip_vali = [], [], [], []
 
+            for train_index, vali_index in kf_triplet.split(data_trip):
+                data_trip_train.append(data_trip.iloc[train_index])
+                data_trip_vali.append(data_trip.iloc[vali_index])
+                y_trip_train.append(y_trip[train_index])
+                y_trip_vali.append(y_trip[vali_index])
+
+            data_gen_train, data_gen_vali, data_gen_test, y_train, y_vali, y_test = [], [], [], [], [], []
             # Put time information into dataframe
-            data_stdp_train = data_aug_gp.STDP_dw_gen(x_stdp_train)
-            data_stdp_vali = data_aug_gp.STDP_dw_gen(x_stdp_vali)
+            for i in range(vali_split):
+                data_stdp_train = data_aug_gp.STDP_dw_gen(x_stdp_train[i])
+                data_stdp_vali = data_aug_gp.STDP_dw_gen(x_stdp_vali[i])
+
+                data_quad_train = data_aug_gp.quad_dw_gen(x_quad_train[i])
+                data_quad_vali = data_aug_gp.quad_dw_gen(x_quad_vali[i])
+
+                data_gen_train.append(pd.concat([data_stdp_train, data_trip_train[i], data_quad_train], axis=0))
+                data_gen_vali.append(pd.concat([data_stdp_vali, data_trip_vali[i], data_quad_vali], axis=0))
+
+                y_train.append(np.concatenate([y_stdp_train[i], y_trip_train[i], y_quad_train[i]]))
+                y_vali.append(np.concatenate([y_stdp_vali[i], y_trip_vali[i], y_quad_vali[i]]))
+
             data_stdp_test = data_aug_gp.STDP_dw_gen(x_stdp_test.reshape(-1, 1))
-
-            data_quad_train = data_aug_gp.quad_dw_gen(x_quad_train)
-            data_quad_vali = data_aug_gp.quad_dw_gen(x_quad_vali)
             data_quad_test = data_aug_gp.quad_dw_gen(x_quad_test.reshape(-1, 1))
+            data_gen_test.append(pd.concat([data_stdp_test, data_trip_test, data_quad_test], axis=0))
+            y_test = np.concatenate([y_stdp_test, y_trip_test, y_quad_test])
 
+        # elif data_aug == 'gp_samp':
+        #     pass
+        # elif data_aug == 'raw_samp':
+        #     pass
+        # else:
+        #     return 'Wrong augmentation!!'
 
-
-        elif data_aug == 'gp_samp':
-            pass
-        elif data_aug == 'raw_samp':
-            pass
-        else:
-            return 'Wrong augmentation!!'
-
-
-
-
-
-    return
+    return data_gen_train, data_gen_vali, data_gen_test, y_train, y_vali, y_test

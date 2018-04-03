@@ -6,7 +6,7 @@ import numpy as np
 class KernelGen(object):
 
     def __init__(self, tau_left=100, tau_right=20, scale_left=1, scale_right=1, scale=1, side='right', tau=20,
-                 reso_kernel=2, len_kernel=101, len_trip=101, bias=0, kernel_scale=None):
+                 reso_kernel=2, len_kernel=101, len_trip=101, bias=0, kernel_scale=np.ones(3)):
         """
         Created and build the kernel
         :param tau_left: exponential decay tau for left side of kernel

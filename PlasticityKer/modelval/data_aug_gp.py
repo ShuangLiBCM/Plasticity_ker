@@ -6,6 +6,7 @@ import pandas as pd
 from modelval import gp_regressor
 import pdb
 
+
 def stdp_gp(random_state=0, test_fold=0, **params):
     """
     Generate augmented STDP data through sample from the GP regressor with designated parameter
@@ -18,10 +19,12 @@ def stdp_gp(random_state=0, test_fold=0, **params):
 
     data1 = data[data['ptl_idx'] == 1]
 
+    train_index, test_index = train_test_split(data1['dt1'].shape[0], test_fold=test_fold, random_state=random_state)
 
-
-    x_train, x_test, y_train, y_test = train_test_split(data1['dt1'], data1['dw_mean'], n_folds=5,
-                                                        test_fold=test_fold, random_state=random_state)
+    x_train = data1['dt1'].values[train_index]
+    y_train = data1['dw_mean'].values[train_index]
+    x_test = data1['dt1'].values[test_index]
+    y_test = data1['dw_mean'].values[test_index]
 
     # Fit the training data with Gaussian process
     std_stdp = data1[np.abs(data1['dt1']) > 50]['dw_mean'].std()
@@ -56,6 +59,7 @@ def stdp_gp(random_state=0, test_fold=0, **params):
     # plt.legend(loc='upper left')
     return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1), f_mean * std_stdp
 
+
 def STDP_dw_gen(dt, df_ori=None):
     """
     put dt into data frame
@@ -78,7 +82,8 @@ def STDP_dw_gen(dt, df_ori=None):
 
     return df
 
-def quad_gp(random_state=0, **params):
+
+def quad_gp(random_state=100, test_fold=0, **params):
     """
     Generate augmented Quadruplet data through sample from the GP regressor with designated parameter
     :param random_state:
@@ -91,8 +96,13 @@ def quad_gp(random_state=0, **params):
     data3 = data[data['ptl_idx'] == 3]
 
     # Split into training and testing set
-    x_train, x_test, y_train, y_test = train_test_split(data3['dt2'].values, data3['dw_mean'].values, n_folds=5,
-                                                        test_fold=test_fold_num, random_state=random_state)
+    train_index, test_index = train_test_split(data3['dt2'].shape[0], n_folds=5,
+                                               test_fold=test_fold, random_state=random_state)
+
+    x_train = data3['dt2'].values[train_index]
+    y_train = data3['dw_mean'].values[train_index]
+    x_test = data3['dt2'].values[test_index]
+    y_test = data3['dw_mean'].values[test_index]
 
     std_quad = data3[(data3['dt2'] < -50)]['dw_mean'].std()
 
@@ -131,6 +141,7 @@ def quad_gp(random_state=0, **params):
     """
     return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1), f_mean * std_quad
 
+
 def quad_dw_gen(dt, df_ori=None):
     """
     put dt into data frame
@@ -154,24 +165,26 @@ def quad_dw_gen(dt, df_ori=None):
 
     return df
 
-def triplet_dw_gen(n_samples=20):
+
+def triplet_dw_gen(random_state=10, test_fold=0, n_samples=20):
 
     # Obtain data from triplet protocol
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
     data2 = data[data['ptl_idx'] == 2]
 
-    # Split the raw ptl2 data into 80%, 20% as training and testing data
-    np.random.seed(0)
-    data2_idx = np.random.permutation(len(data2))
-    train_len = int(len(data2)*0.8)
-    data2_train = data2.iloc[data2_idx[:train_len]]
-    data2_test = data2.iloc[data2_idx[train_len:]]
+    # Split into training and testing set
+    train_index, test_index = train_test_split(data2.shape[0], n_folds=5,
+                                               test_fold=test_fold, random_state=random_state)
+
+    data2_train = data2.iloc[train_index]
+    data2_test = data2.iloc[test_index]
 
     dt_choices = np.array(data2_train['dt1'].value_counts().index)
 
     # Sample from the mean value of the training data to fill into the data frame
     data2_train_gen = pd.DataFrame(data=None, columns=list(data2.columns))
+
     for i in range(len(dt_choices)):
         new_entry = data2[data2['dt1'] == dt_choices[i]].iloc[0]
         data_mean = data2_train[data2_train['dt1'] == dt_choices[i]]['dw_mean'].mean()
@@ -201,7 +214,6 @@ def triplet_dw_gen(n_samples=20):
     dt_choices1 = np.array(data4['dt1'].value_counts().index)
     dt_choices2 = np.array(data4['dt2'].value_counts().index)
 
-    # pdb.set_trace()
     for i in range(len(dt_choices1)):
         new_entry = data4[(data4['dt1'] == dt_choices1[i]) & (data4['dt2'] == dt_choices2[i])]
         data_mean = new_entry['dw_mean']
@@ -227,6 +239,7 @@ def triplet_dw_gen(n_samples=20):
 
     return data_train_gen, y_train.reshape(-1, 1), data_test_gen, y_test.reshape(-1, 1)
 
+
 def smooth(x, width=10, width_list=None):
     y = np.zeros(x.shape)
     if width_list is None:
@@ -237,18 +250,15 @@ def smooth(x, width=10, width_list=None):
             y[i] = np.mean(x[np.max([0, i-int(width_list[i])]):np.min([x.shape[0], i+int(width_list[i])])])
     return y
 
-def train_test_split(x, y, n_folds=5, test_fold = 0, random_state=0):
+
+def train_test_split(total_len, n_folds=5, test_fold=0, random_state=0):
 
     np.random.seed(random_state)
-    index = np.random.permutation(range(len(x)))
-    test_size = int(len(x)/n_folds)
+    index = np.random.permutation(range(total_len))
+    test_size = int(total_len/n_folds)
 
     test_index = index[test_fold * test_size: (test_fold+1)*test_size]
     train_index = np.setdiff1d(index, test_index)
 
-    x_train = x[train_index]
-    x_test = x[test_index]
-    y_train = y[train_index]
-    y_test = y[test_index]
 
-    return x_train, x_test, y_train, y_test
+    return train_index, test_index
