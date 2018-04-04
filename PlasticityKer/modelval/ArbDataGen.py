@@ -301,15 +301,15 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
             y_stdp_test = np.array(data_stdp_test['dw_mean']).reshape(-1, 1)
             data_stdp_train1 = data1.iloc[train_index1]
 
-            kf_stdp = KFold(n_splits=5)
+            kf_stdp = KFold(n_splits=vali_split, shuffle=True, random_state=12)
 
             data_stdp_train, data_stdp_vali, y_stdp_train, y_stdp_vali = [], [], [], []
 
-            for train_index, test_index in kf_stdp.split(data_stdp_train1):
+            for train_index, vali_index in kf_stdp.split(data_stdp_train1):
                 data_stdp_train.append(data_stdp_train1.iloc[train_index])
-                data_stdp_vali.append(data_stdp_train1.iloc[test_index])
+                data_stdp_vali.append(data_stdp_train1.iloc[vali_index])
                 y_stdp_train.append(np.array(data_stdp_train1.iloc[train_index]['dw_mean']).reshape(-1, 1))
-                y_stdp_vali.append(np.array(data_stdp_train1.iloc[test_index]['dw_mean']).reshape(-1, 1))
+                y_stdp_vali.append(np.array(data_stdp_train1.iloc[vali_index]['dw_mean']).reshape(-1, 1))
 
             # Generate data for STDP
             data3 = data[data['ptl_idx'] == 3]
@@ -320,15 +320,15 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
             y_quad_test = np.array(data_quad_test['dw_mean']).reshape(-1, 1)
             data_quad_train1 = data3.iloc[train_index1]
 
-            kf_quad = KFold(n_splits=5)
+            kf_quad = KFold(n_splits=vali_split, shuffle=True, random_state=123)
 
             data_quad_train, data_quad_vali, y_quad_train, y_quad_vali = [], [], [], []
 
-            for train_index, test_index in kf_quad.split(data_quad_train1):
+            for train_index, vali_index in kf_quad.split(data_quad_train1):
                 data_quad_train.append(data_quad_train1.iloc[train_index])
-                data_quad_vali.append(data_quad_train1.iloc[test_index])
+                data_quad_vali.append(data_quad_train1.iloc[vali_index])
                 y_quad_train.append(np.array(data_quad_train1.iloc[train_index]['dw_mean']).reshape(-1, 1))
-                y_quad_vali.append(np.array(data_quad_train1.iloc[test_index]['dw_mean']).reshape(-1, 1))
+                y_quad_vali.append(np.array(data_quad_train1.iloc[vali_index]['dw_mean']).reshape(-1, 1))
 
             data_trip, y_trip, data_trip_test, y_trip_test = data_aug_gp.triplet_dw_gen(test_fold=test_fold_num,
                                                                                         n_samples=1)
