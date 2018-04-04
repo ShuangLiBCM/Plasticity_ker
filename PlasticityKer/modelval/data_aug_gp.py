@@ -7,7 +7,7 @@ from modelval import gp_regressor
 import pdb
 
 
-def stdp_gp(random_state=0, test_fold=0, **params):
+def stdp_gp(random_state=10, test_fold=0, **params):
     """
     Generate augmented STDP data through sample from the GP regressor with designated parameter
     :param random_state:

@@ -4,7 +4,7 @@
 """
 import numpy as np
 import pandas as pd
-from modelval import pairptl, network, trainer, dataset, data_aug_knn, perform_eval
+from modelval import pairptl, network, trainer, dataset, data_aug, perform_eval
 from modelval.ArbDataGen import arb_w_gen, data_Gen
 from modelval.kernel import KernelGen
 
@@ -18,6 +18,12 @@ def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, v
 
     # Visualize kernel
     vali_err = np.zeros(len(data_gen_train))
+    kernel_pre = []
+    kernel_post = []
+    kernel_post_post = []
+    fc_w = []
+    bias = []
+    scale = []
 
     for i in range(len(data_gen_train)):
 
@@ -29,7 +35,12 @@ def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, v
         data_hippo = data[data['ptl_idx'] < 5]
         ptl_list = [1, 2, 3, 4]
         spk_len = int(data_hippo['train_len'].max() * 1000 / ker_test.reso_kernel)
-        if_noise = 1
+
+        if data_aug == 'gp_mean':
+            if_noise = 1
+        else:
+            if_noise = 0
+
         aug_times = [1, 1, 1, 1]
         spk_pairs_train, targets_train = arb_w_gen(df=data_gen_train[i], ptl_list=ptl_list, targets=y_train[i],
                                                    if_noise=if_noise, spk_len=spk_len, kernel=ker_test,
@@ -67,5 +78,12 @@ def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, v
             learning_rate = learning_rate / 3
 
         vali_err[i] = mini_vali_loss
+        toy_net_trainer.restore_best()
+        kernel_pre.append(toy_net_trainer.evaluate(ops=toy_data_net.kernel_pre))
+        kernel_post.append(toy_net_trainer.evaluate(ops=toy_data_net.kernel_post))
+        kernel_post_post.append(toy_net_trainer.evaluate(ops=toy_data_net.kernel_post_post))
+        fc_w.append(toy_net_trainer.evaluate(ops=toy_data_net.fc_w))
+        bias.append(toy_net_trainer.evaluate(ops=toy_data_net.bias))
+        scale.append(toy_net_trainer.evaluate(ops=toy_data_net.scaler))
 
-    return vali_err
+    return vali_err, kernel_pre, kernel_post, kernel_post_post, fc_w, bias, scale

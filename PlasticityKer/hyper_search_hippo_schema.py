@@ -51,7 +51,7 @@ class Dataaug(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 'Raw data'), (1, 'gp_mean'), (2, 'GP_sample')]
+        return [(0, 'Raw data'), (1, 'gp_mean'), (2, 'gp_sample')]
 
 @schema
 class L1RegConstant(dj.Lookup):
@@ -187,13 +187,14 @@ class ModelSelection(dj.Computed):
         save_dir = '/'.join(('/src/Plasticity_Ker/model/', data_type, data_aug, networ_type,
                              str(alpha1), str(alpha2), str(alpha_lp), str(alpha_hm), str(seed)))
 
-        vali_err = ModelFitCV(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0,
+        vali_err, w_pre, w_post, w_post_post, fc_w, bias, scale = ModelFitCV(data_type=data_type, data_aug=data_aug, test_fold_num=0,
                               vali_split=5, save_dir_set=save_dir, random_seed=seed)
 
-        key['val_error'] = mse
-        key['val_loss'] = cost
-        key['scale'] = fc_w
-        key['pre_kernel'] = kernel_pre
-        key['post_kernel'] = kernel_post
-        key['post_post_kernel'] = kernel_post_post
+        key['val_error'] = vali_err
+        key['fc_w'] = fc_w
+        key['pre_kernel'] = w_pre
+        key['post_kernel'] = w_post
+        key['post_post_kernel'] = w_post_post
+        key['bias'] = bias
+        key['scale'] = scale
         self.insert1(key)
