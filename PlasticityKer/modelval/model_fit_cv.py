@@ -4,12 +4,12 @@
 """
 import numpy as np
 import pandas as pd
-from modelval import pairptl, network, trainer, dataset, data_aug, perform_eval
+from modelval import pairptl, network, trainer, dataset, perform_eval
 from modelval.ArbDataGen import arb_w_gen, data_Gen
 from modelval.kernel import KernelGen
 
 def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, vali_split=5, save_dir_set=None,
-               random_seed=0):
+               random_seed=0, reg_scale=(1, 1, 1, 1)):
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
 
@@ -51,7 +51,7 @@ def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, v
 
         # Create the network
         ground_truth_init = 0
-        reg_scale = (10, 50, 100, 200)
+        reg_scale = reg_scale
         np.random.seed(random_seed)
         init_seed = tuple(np.random.randint(0, 100, size=4))
 

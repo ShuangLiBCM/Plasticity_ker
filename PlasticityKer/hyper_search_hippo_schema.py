@@ -65,7 +65,7 @@ class L1RegConstant(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 0.0)]
+        return [(0, 1.0), (0, 5.0), (0, 10.0), (0, 50.0)]
 
 
 @schema
@@ -80,7 +80,7 @@ class L2RegConstant(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 1.0)]
+        return [(0, 1.0), (0, 10.0), (0, 50.0), (0, 100.0)]
 
 @schema
 class SmoothLp(dj.Lookup):
@@ -94,7 +94,7 @@ class SmoothLp(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 1.0)]
+        return [(0, 100.0), (0, 200.0), (0, 500.0), (0, 1000.0)]
 
 @schema
 class SmoothHam(dj.Lookup):
@@ -108,7 +108,7 @@ class SmoothHam(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 1.0)]
+        return [(0, 200.0), (0, 500.0), (0, 3000.0), (0, 5000.0)]
 
 @schema
 class Loops(dj.Lookup):
@@ -188,7 +188,7 @@ class ModelSelection(dj.Computed):
                              str(alpha1), str(alpha2), str(alpha_lp), str(alpha_hm), str(seed)))
 
         vali_err, w_pre, w_post, w_post_post, fc_w, bias, scale = ModelFitCV(data_type=data_type, data_aug=data_aug, test_fold_num=0,
-                              vali_split=5, save_dir_set=save_dir, random_seed=seed)
+                              vali_split=5, save_dir_set=save_dir, random_seed=seed, reg_scale=(alpha1, alpha2, alpha_lp, alpha_hm))
 
         key['val_error'] = vali_err
         key['fc_w'] = fc_w
