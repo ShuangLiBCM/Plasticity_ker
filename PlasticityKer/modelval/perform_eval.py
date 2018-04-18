@@ -15,3 +15,23 @@ def R2_corr(predictions, targets, x_fit):
     y_fit = x_fit * b1 + b2
     return R2, corr, y_fit
 
+def pred_model_stdp(x, reso, pred_model):
+    """
+    Given the prediction of model for stdp and interested time x, return the error with length x
+    :param x: array of time for points interested in generating prediction
+    :param reso: sampling resolution
+    :param pred_model: fitted response
+    :return:
+    """
+
+    return
+
+def pred_net_stdp(x, reso, pred_net):
+    """
+        Given the prediction of model for stdp and interested time x, return the error with length x
+        :param x: array of time for points interested in generating prediction
+        :param reso: sampling resolution
+        :param pred_model: fitted response
+        :return:
+    """
+    return

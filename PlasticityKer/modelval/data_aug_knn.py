@@ -108,7 +108,9 @@ def quad_dw_gen(n_neighbors=7, df=None):
 
     return df, y_pred
 
+
 def smooth(x, width=10, width_list=None):
+
     y = np.zeros(x.shape)
     if width_list is None:
         for i in range(x.shape[0]):
@@ -117,6 +119,7 @@ def smooth(x, width=10, width_list=None):
         for i in range(x.shape[0]):
             y[i] = np.mean(x[np.max([0, i-int(width_list[i])]):np.min([x.shape[0], i+int(width_list[i])])])
     return y
+
 
 def target_pred_gen(targets, predictions, ptl_len, rep_time):
     """
