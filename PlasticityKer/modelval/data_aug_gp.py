@@ -285,3 +285,26 @@ def train_test_split(total_len, n_folds=5, test_fold=0, random_state=0):
 
 
     return train_index, test_index
+
+
+def target_pred_gen(targets, predictions, ptl_len, rep_time):
+    """
+    Return matched targets and predictions for each protocol
+    :param ptl_len: list of length for each protocol
+    :param rep_time: list of protocol repetition protocol
+    :return:
+    """
+    ptl_len = [x * i for x, i in zip(ptl_len, rep_time)]
+
+    targets_out = []
+    predictions_out = []
+
+    for i in range(len(ptl_len)):
+        if i == 0:
+            targets_out.append(targets[:ptl_len[i]])
+            predictions_out.append(predictions[:ptl_len[i]])
+        else:
+            targets_out.append(targets[sum(ptl_len[:i]):sum(ptl_len[:i + 1])])
+            predictions_out.append(predictions[sum(ptl_len[:i]):sum(ptl_len[:i + 1])])
+
+    return ptl_len, targets_out, predictions_out

@@ -246,8 +246,8 @@ class TripNet(PairNet):
                     mask = np.zeros(shape=[kernel_len, 1])
                     mask2 = np.zeros(shape=[kernel_len, 1])
                     mask3 = np.zeros(shape=[len_trip, 1])
-                    mask[:int((kernel_len-1)/2), 0] = 1
-                    mask2[:int((kernel_len-1)/2)+1, 0] = 1
+                    mask[:int((kernel_len -1)/2), 0] = 1
+                    mask2[:int((kernel_len -1)/2)+1, 0] = 1
                     mask3[:int((len_trip - 1)/2)+1, 0] = 1
 
                     if self.ground_truth_init:  # Not in training mode

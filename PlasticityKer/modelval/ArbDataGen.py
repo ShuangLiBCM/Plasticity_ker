@@ -209,7 +209,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
     return spk_time_pre, spk_time_post, spk_pair
 
 
-def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None,
+def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=[1,1,1,1],
               seed=None, net_type='triplet', if_noise=1, batch_size=1000, output_target=True):
     """
     Generate arbitrary target w with given spike trains, kernel and network
