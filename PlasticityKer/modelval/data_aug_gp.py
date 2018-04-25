@@ -7,15 +7,13 @@ from modelval import gp_regressor
 import pdb
 
 
-def stdp_gp(random_state=10, test_fold=0, **params):
+def stdp_gp(data, random_state=10, test_fold=0, aug_size=200, **params):
     """
     Generate augmented STDP data through sample from the GP regressor with designated parameter
     :param random_state:
     :param params: Enter as keyword argument to the GP regressor
     :return:
     """
-
-    data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
 
     data1 = data[data['ptl_idx'] == 1]
 
@@ -31,7 +29,7 @@ def stdp_gp(random_state=10, test_fold=0, **params):
     x = x_train.reshape(-1, 1)/100
     y = y_train.reshape(-1, 1)/std_stdp
 
-    x_aug = np.linspace(np.min(x), np.max(x), 200).reshape(-1, 1)
+    x_aug = np.linspace(np.min(x), np.max(x), aug_size).reshape(-1, 1)
 
     # Use Gaussian regressor that have been validated using hyper-parameter
     gp_rg = gp_regressor.GP_regressor(x, y, x_aug, **params)
@@ -60,12 +58,11 @@ def stdp_gp(random_state=10, test_fold=0, **params):
     return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1), f_mean * std_stdp
 
 
-def STDP_dw_gen(dt, df_ori=None):
+def STDP_dw_gen(data, dt, df_ori=None):
     """
     put dt into data frame
     """
     if df_ori is None:
-        data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
         data1 = data[data['ptl_idx'] == 1]
     else:
         data = df_ori
@@ -83,16 +80,14 @@ def STDP_dw_gen(dt, df_ori=None):
     return df
 
 
-def quad_gp(random_state=100, test_fold=0, **params):
+def quad_gp(data, random_state=100, test_fold=0, aug_size=200, **params):
     """
     Generate augmented Quadruplet data through sample from the GP regressor with designated parameter
     :param random_state:
     :param params:
     :return:
     """
-
-    data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
-
+    
     data3 = data[data['ptl_idx'] == 3]
 
     # Split into training and testing set
@@ -113,8 +108,8 @@ def quad_gp(random_state=100, test_fold=0, **params):
     x_neg_min, x_neg_max = np.min(data3[data3['dt2'] < 0]['dt2']) / 100, np.max(data3[data3['dt2'] < 0]['dt2']) / 100
     x_posi_min, x_posi_max = np.min(data3[data3['dt2'] > 0]['dt2']) / 100, np.max(data3[data3['dt2'] > 0]['dt2']) / 100
 
-    x_aug = np.concatenate([np.linspace(x_neg_min, x_neg_max, 100),
-                            np.linspace(x_posi_min, x_posi_max, 100)]).reshape(-1, 1)
+    x_aug = np.concatenate([np.linspace(x_neg_min, x_neg_max, int(aug_size/2)),
+                            np.linspace(x_posi_min, x_posi_max, int(aug_size/2))]).reshape(-1, 1)
 
     # Use Gaussian regressor that have been validated using hyper-parameter
     gp_rg = gp_regressor.GP_regressor(x, y, x_aug, **params)
@@ -142,12 +137,11 @@ def quad_gp(random_state=100, test_fold=0, **params):
     return x_aug * 100, f_samp.reshape(-1, 1), x_test, y_test.reshape(-1, 1), f_mean * std_quad
 
 
-def quad_dw_gen(dt, df_ori=None):
+def quad_dw_gen(data, dt, df_ori=None):
     """
     put dt into data frame
     """
     if df_ori is None:
-        data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
         data3 = data[data['ptl_idx'] == 3]
     else:
         data = df_ori
@@ -166,11 +160,10 @@ def quad_dw_gen(dt, df_ori=None):
     return df
 
 
-def triplet_dw_gen(random_state=10, test_fold=0, n_samples=20):
+def triplet_dw_gen(data, test_fold=0, n_samples=20, random_state=10):
 
     # Obtain data from triplet protocol
 
-    data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
     data2 = data[data['ptl_idx'] == 2]
 
     # Split into training and testing set
@@ -209,7 +202,7 @@ def triplet_dw_gen(random_state=10, test_fold=0, n_samples=20):
 
     # Sample from the raw ptl 4 data as the training data
     data4 = data[data['ptl_idx'] == 4]
-    data4_train_gen = pd.DataFrame(data=None, columns=list(data2.columns))
+    data4_train_gen = pd.DataFrame(data=None, columns=list(data4.columns))
 
     dt_choices1 = np.array(data4['dt1'].value_counts().index)
     dt_choices2 = np.array(data4['dt2'].value_counts().index)
@@ -220,6 +213,7 @@ def triplet_dw_gen(random_state=10, test_fold=0, n_samples=20):
         data_scale = new_entry['dw_ste']
 
         if n_samples > 1:
+            np.random.seed(random_state)
             sample = np.random.normal(loc=data_mean, scale=data_scale, size=n_samples)
             for j in range(n_samples):
                 new_entry['dw_mean'] = sample[j]
@@ -237,7 +231,36 @@ def triplet_dw_gen(random_state=10, test_fold=0, n_samples=20):
     data_test_gen = pd.concat([data2_test_gen, data4])
     y_test = np.concatenate([y_test2, data4['dw_mean'].reshape(-1, 1)])
 
-    return data_train_gen, y_train.reshape(-1, 1), data_test_gen, y_test.reshape(-1, 1)
+    return data_train_gen, y_train, data_test_gen, y_test
+
+def vc_data_gen(data, ptl_idx=5, n_samples=10, random_state=100):
+
+    data_ptl = data[data['ptl_idx'] == ptl_idx]
+
+    data_test_gen = data_ptl
+    data_train_gen = pd.DataFrame(data=None, columns=list(data_ptl.columns))
+
+    for i in range(len(data_ptl)):
+
+        new_entry = data_ptl[data_ptl['dw_mean'] == data_ptl.iloc[i]['dw_mean']]
+        data_mean = new_entry['dw_mean']
+        data_scale = new_entry['dw_ste']
+
+        if n_samples > 1:
+            np.random.seed(random_state+i)
+            sample = np.random.normal(loc=data_mean, scale=data_scale, size=n_samples)
+            for j in range(n_samples):
+                new_entry['dw_mean'] = sample[j]
+                data_train_gen = data_train_gen.append(new_entry, ignore_index=True)
+        else:
+            sample = data_mean
+            new_entry['dw_mean'] = sample
+            data_train_gen = data_train_gen.append(new_entry, ignore_index=True)
+
+    y_train = np.array(data_train_gen['dw_mean']).reshape(-1, 1)
+    y_test = np.array(data_test_gen['dw_mean']).reshape(-1, 1)
+
+    return data_train_gen, y_train, data_test_gen, y_test
 
 
 def smooth(x, width=10, width_list=None):

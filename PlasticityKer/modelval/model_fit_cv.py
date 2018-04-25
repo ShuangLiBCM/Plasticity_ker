@@ -9,7 +9,7 @@ from modelval.ArbDataGen import arb_w_gen, data_Gen
 from modelval.kernel import KernelGen
 
 def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, vali_split=5, save_dir_set=None,
-               random_seed=0, reg_scale=(1, 1, 1, 1)):
+               random_seed=0, reg_scale=(1, 1, 1, 1), init_seed=(0, 1, 2, 3, 4)):
 
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
 
@@ -53,7 +53,7 @@ def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, v
         ground_truth_init = 0
         reg_scale = reg_scale
         np.random.seed(random_seed)
-        init_seed = tuple(np.random.randint(0, 100, size=4))
+
 
         toy_data_net = network.TripNet(kernel=ker_test, ground_truth_init=ground_truth_init, reg_scale=reg_scale,
                                        n_input=spk_pairs_train.shape[1], init_seed=init_seed)
@@ -62,7 +62,7 @@ def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, v
         save_dir = save_dir_set + 'cv' + str(i)
         toy_net_trainer = trainer.Trainer(toy_data_net.mse, toy_data_net.loss, input_name=toy_data_net.inputs,
                                           target_name=toy_data_net.target, save_dir=save_dir,
-                                          optimizer_config={'learning_rate': toy_data_net.lr})
+                                          optimizer_config={'learning_rate': toy_data_net.lr},  device_config=toy_data_net.device_config)
 
         # Package the data
         train_data = dataset.Dataset(spk_pairs_train, targets_train)

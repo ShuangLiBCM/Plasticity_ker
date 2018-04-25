@@ -12,7 +12,7 @@ def spk_see(ptl_type=1, spk_pairs=None):
         loci_pre = []
         loci_post = []
         dt_mean = []
-        for i in range(spk_pairs.shape[0]):
+        for i in range(spk_pairs.shape[0]-2):
             loci_pre_tmp = np.where(spk_pairs[i, :, 0] == 1)[0]
             loci_post_tmp = np.where(spk_pairs[i, :, 1] == 1)[0]
             loci_pre.append(loci_pre_tmp)
@@ -27,7 +27,7 @@ def spk_see(ptl_type=1, spk_pairs=None):
         loci_pre = []
         loci_post = []
         dt_mean = []
-        for i in range(spk_pairs.shape[0]):
+        for i in range(spk_pairs.shape[0]-2):
             loci_pre_tmp = np.where(spk_pairs[i, :, 0] == 1)[0]
             loci_post_tmp = np.where(spk_pairs[i, :, 1] == 1)[0]
 

@@ -4,7 +4,8 @@
 
 class PairPtl(object):
 
-    def __init__(self, ptl_idx, pre_spk_num, pre_spk_freq, post_spk_num, post_spk_freq, ptl_occ, ptl_freq, dt1, dt2, dt3, dw_mean, dw_ste, verbose=0):
+    def __init__(self, ptl_idx, pre_spk_num, pre_spk_freq, post_spk_num, post_spk_freq,
+                 ptl_occ, ptl_freq, dt1, dt2, dt3, dw_mean, dw_ste, verbose=0):
         """
         Convert data frame entry into object attributes
         :param ptl_idx:

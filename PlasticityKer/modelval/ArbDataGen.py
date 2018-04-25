@@ -29,12 +29,12 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
 
     spk_pair = np.zeros((spk_len+2, 2))
 
-    # Convert protocl number into dummy variable
+    # Convert protocol number into dummy variable
     ptl_indicator = np.zeros((4))
     ptl_indicator[int(ptl.ptl_idx-1)] = 1
 
-    spk_pair[-2:,0] = ptl_indicator[:2]
-    spk_pair[-2:,1] = ptl_indicator[2:]
+    spk_pair[-2:, 0] = ptl_indicator[:2]
+    spk_pair[-2:, 1] = ptl_indicator[2:]
 
     rep_interval = int(np.floor(1000 / ptl.ptl_freq / spk_reso))
     rep_num = int(np.floor(train_len * ptl.ptl_freq))
@@ -210,7 +210,7 @@ def arb_spk_gen(ptl, spk_reso, spk_len=None, if_noise=1, seed=None):
 
 
 def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None, targets=None, aug_times=None,
-              seed=None, net_type='triplet', if_noise=1, batch_size=1000):
+              seed=None, net_type='triplet', if_noise=1, batch_size=1000, output_target=True):
     """
     Generate arbitrary target w with given spike trains, kernel and network
     three situations in total:
@@ -237,7 +237,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
             data_ptl = df[df['ptl_idx'] == ptl_list[i]]
 
             if targets is not None:
-                target_tmp = targets[(df['ptl_idx'] == ptl_list[i]).reshape(-1,1)]
+                target_tmp = targets[(df['ptl_idx'] == ptl_list[i]).reshape(-1, 1)]
 
             k = 0
             for j in range(len(data_ptl)):
@@ -256,7 +256,7 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
         spk_pairs = np.array(spk_pairs)   # Check the dimension into  (m * n * 2)
 
     # Get the network used to generate prediction
-    if targets is None:
+    if (targets is None) and (output_target):
         if net_type == 'pair':
             gen_pairnet = network.PairNet(kernel=kernel, ground_truth_init=1, n_input=spk_pairs.shape[1])
             # Send the network graph into trainer, and name of placeholder
@@ -282,21 +282,21 @@ def arb_w_gen(spk_pairs=None, df=None, ptl_list=None, kernel=None, spk_len=None,
 
         else:
             print('Wrong network!!')
-    else:
+    elif targets is not None:
         targets = np.vstack(target_gen)
 
     return spk_pairs, targets
 
 
-def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_split=5):
+def data_Gen(data, data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_split=5, aug_size=200):
 
     if data_type == 'hippocampus':
 
         if data_aug == 'raw_data':
-            data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
             data1 = data[data['ptl_idx'] == 1]
 
             train_index1, test_index = data_aug_gp.train_test_split(len(data1), test_fold=test_fold_num, random_state=2)
+            
             data_stdp_test = data1.iloc[test_index]
             y_stdp_test = np.array(data_stdp_test['dw_mean']).reshape(-1, 1)
             data_stdp_train1 = data1.iloc[train_index1]
@@ -365,9 +365,9 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
                       'sigma_noise': 1.0}
 
             if data_aug == 'gp_mean':
-                x_stdp, _, x_stdp_test, y_stdp_test, y_stdp = data_aug_gp.stdp_gp(test_fold=test_fold_num, **params)
+                x_stdp, _, x_stdp_test, y_stdp_test, y_stdp = data_aug_gp.stdp_gp(data, test_fold=test_fold_num, aug_size=aug_size, **params)
             elif data_aug == 'gp_samp':
-                x_stdp, y_stdp, x_stdp_test, y_stdp_test, _ = data_aug_gp.stdp_gp(test_fold=test_fold_num, **params)
+                x_stdp, y_stdp, x_stdp_test, y_stdp_test, _ = data_aug_gp.stdp_gp(data, test_fold=test_fold_num, aug_size=aug_size, **params)
 
             kf_stdp = KFold(n_splits=vali_split, shuffle=True, random_state=12)
 
@@ -386,9 +386,9 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
                       'sigma_noise': 1.2}
 
             if data_aug == 'gp_mean':
-                x_quad, _, x_quad_test, y_quad_test, y_quad = data_aug_gp.quad_gp(test_fold=test_fold_num, **params)
+                x_quad, _, x_quad_test, y_quad_test, y_quad = data_aug_gp.quad_gp(data, test_fold=test_fold_num, **params)
             elif data_aug == 'gp_samp':
-                x_quad, y_quad, x_quad_test, y_quad_test, _ = data_aug_gp.quad_gp(test_fold=test_fold_num, **params)
+                x_quad, y_quad, x_quad_test, y_quad_test, _ = data_aug_gp.quad_gp(data, test_fold=test_fold_num, **params)
 
             kf_quad = KFold(n_splits=vali_split, shuffle=True, random_state=123)
 
@@ -401,8 +401,12 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
                 y_quad_vali.append(y_quad[vali_index])
 
             # Generate data for triplet protocol
-            data_trip, y_trip, data_trip_test, y_trip_test = data_aug_gp.triplet_dw_gen(test_fold=test_fold_num,
+            if data_aug == 'gp_mean':
+                data_trip, y_trip, data_trip_test, y_trip_test = data_aug_gp.triplet_dw_gen(data, test_fold=test_fold_num,
                                                                                         n_samples=1)
+            elif data_aug == 'gp_samp':
+                data_trip, y_trip, data_trip_test, y_trip_test = data_aug_gp.triplet_dw_gen(data, test_fold=test_fold_num,
+                                                                                        n_samples=20)
             # Split the triplet data into training and validation
             kf_triplet = KFold(n_splits=vali_split, shuffle=True, random_state=456)
             data_trip_train, data_trip_vali, y_trip_train, y_trip_vali = [], [], [], []
@@ -416,11 +420,11 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
             data_gen_train, data_gen_vali, data_gen_test, y_train, y_vali, y_test = [], [], [], [], [], []
             # Put time information into dataframe
             for i in range(vali_split):
-                data_stdp_train = data_aug_gp.STDP_dw_gen(x_stdp_train[i])
-                data_stdp_vali = data_aug_gp.STDP_dw_gen(x_stdp_vali[i])
+                data_stdp_train = data_aug_gp.STDP_dw_gen(data, x_stdp_train[i])
+                data_stdp_vali = data_aug_gp.STDP_dw_gen(data, x_stdp_vali[i])
 
-                data_quad_train = data_aug_gp.quad_dw_gen(x_quad_train[i])
-                data_quad_vali = data_aug_gp.quad_dw_gen(x_quad_vali[i])
+                data_quad_train = data_aug_gp.quad_dw_gen(data, x_quad_train[i])
+                data_quad_vali = data_aug_gp.quad_dw_gen(data, x_quad_vali[i])
 
                 data_gen_train.append(pd.concat([data_stdp_train, data_trip_train[i], data_quad_train], axis=0))
                 data_gen_vali.append(pd.concat([data_stdp_vali, data_trip_vali[i], data_quad_vali], axis=0))
@@ -428,14 +432,68 @@ def data_Gen(data_type='hippocampus', data_aug='gp_mean', test_fold_num=0, vali_
                 y_train.append(np.concatenate([y_stdp_train[i], y_trip_train[i], y_quad_train[i]]))
                 y_vali.append(np.concatenate([y_stdp_vali[i], y_trip_vali[i], y_quad_vali[i]]))
 
-            data_stdp_test = data_aug_gp.STDP_dw_gen(x_stdp_test.reshape(-1, 1))
-            data_quad_test = data_aug_gp.quad_dw_gen(x_quad_test.reshape(-1, 1))
+            data_stdp_test = data_aug_gp.STDP_dw_gen(data, x_stdp_test.reshape(-1, 1))
+            data_quad_test = data_aug_gp.quad_dw_gen(data, x_quad_test.reshape(-1, 1))
             data_gen_test.append(pd.concat([data_stdp_test, data_trip_test, data_quad_test], axis=0))
             y_test = np.concatenate([y_stdp_test, y_trip_test, y_quad_test])
 
-        # elif data_aug == 'raw_samp':
-        #     pass
-        # else:
-        #     return 'Wrong augmentation!!'
+    elif data_type == 'visual cortex':
+
+        if data_aug == 'raw_data':
+            data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
+            data9 = data[data['ptl_idx'] == 9]
+
+            # Generate data for vc stdp data
+            train_index1, test_index = data_aug_gp.train_test_split(len(data1), test_fold=test_fold_num, random_state=2)
+            data_stdp_test = data9.iloc[test_index]
+            y_stdp_test = np.array(data_stdp_test['dw_mean']).reshape(-1, 1)
+            data_stdp_train9 = data9.iloc[train_index1]
+
+            kf_stdp = KFold(n_splits=vali_split, shuffle=True, random_state=12)
+
+            data_stdp_train, data_stdp_vali, data_stdp_vali, y_stdp_vali = [], [], [], []
+
+            for train_index, vali_index in kf_stdp.split(data_stdp_train9):
+                data_stdp_train.append(data_stdp_train9.iloc[train_index])
+                data_stdp_vali.append(data_stdp_train9.iloc[vali_index])
+                y_stdp_train.append(np.array(data_stdp_train9.iloc[train_index]['dw_mean']).reshape(-1, 1))
+                y_stdp_vali.append(np.array(data_stdp_train9.iloc[vali_index]['dw_mean']).reshape(-1, 1))
+
+            # Generate data for ptl5
+            ptl_todo = [5, 6, 7, 8]
+
+            data_train, data_vali, y_train, y_vali = [[] for _ in range(4)],  [[] for _ in range(4)],  [[] for _ in range(4)],  [[] for _ in range(4)]
+            data_test_tt = []
+            y_test_tt = []
+
+            for k in range(len(ptl_todo)):
+
+                # Split into training, testing and validation set
+                data_train_tt, y_train_tt, data_test, y_test = data_aug_gp.vc_data_gen(ptl_idx=ptl_todo[k])
+                data_test_tt.append(data_test)
+                y_test_tt.append(y_test)
+
+                kf_quad = KFold(n_splits=vali_split, shuffle=True, random_state=123)
+
+                for train_index, vali_index in kf_quad.split(data_train_tt):
+                    data_train[k].append(data_train_tt.iloc[train_index])
+                    data_vali[k].append(data_train_tt.iloc[vali_index])
+                    y_train[k].append(np.array(data_train_tt.iloc[train_index]['dw_mean']).reshape(-1, 1))
+                    y_vali[k].append(np.array(data_train_tt.iloc[vali_index]['dw_mean']).reshape(-1, 1))
+
+            # Combine the protocols
+
+            data_gen_train, data_gen_vali, data_gen_test, y_train, y_vali, y_test = [], [], [], [], [], []
+
+            for i in range(vali_split):
+
+                data_gen_train.append(pd.concat([data_stdp_train[i], data_train[0][i], data_train[1][i], data_train[2][i], data_train[3][i], data_train[4][i]], axis=0))
+                data_gen_vali.append(pd.concat([data_stdp_vali[i], data_vali[0][i], data_vali[1][i], data_vali[2][i], data_vali[3][i], data_vali[4][i]], axis=0))
+
+                y_train.append(np.concatenate([y_stdp_train[i], y_train[0][i], y_train[1][i], y_train[2][i], y_train[3][i], y_train[4][i]]).reshape(-1, 1))
+                y_vali.append(np.concatenate([y_stdp_vali[i], y_vali[0][i], y_vali[1][i], y_vali[2][i], y_vali[3][i], y_vali[4][i]]).reshape(-1, 1))
+
+            data_gen_test.append(pd.concat([data_stdp_test, data_test_tt[0], data_test_tt[1], data_test_tt[2], data_test_tt[3], data_test_tt[4]], axis=0))
+            y_test = np.concatenate([y_stdp_test, y_test[0], y_test[1], y_test[2], y_test[3], y_test[4]]).reshape(-1, 1)
 
     return data_gen_train, data_gen_vali, data_gen_test, y_train, y_vali, y_test

@@ -9,7 +9,7 @@ from tensorflow.python.util import nest
 class Trainer(object):
 
     def __init__(self, mse, total_loss, input_name, target_name=None, session=None, save_dir=None, optimizer_op=tf.train.AdamOptimizer,
-                 optimizer_config={}):   # If ground truth kernel is given ,it will be used.
+                 optimizer_config={}, device_config=['/device:GPU:0']):   # If ground truth kernel is given ,it will be used.
         self.loss = mse
         self.total_loss = total_loss
         self.inputs_ = input_name
@@ -17,6 +17,7 @@ class Trainer(object):
         self.graph = total_loss.graph
         self.session = session
         self.optimizer_op = optimizer_op
+        self.device_config = device_config
         self.optimizer_config = optimizer_config
         self.loss_tracker = []      # Used for tracking the loss
         self.save_dir = save_dir
@@ -27,22 +28,25 @@ class Trainer(object):
 
         with self.graph.as_default():
 
-            self.optimizer = self.optimizer_op(**self.optimizer_config)
-            self.global_step = tf.Variable(0, trainable=False,
-                                           name='global_step')  # Count how many times the network got updated
+            for d in self.device_config:
+                with tf.device(d):
 
-            self.train_step = self.optimizer.minimize(self.total_loss, global_step=self.global_step)
+                    self.optimizer = self.optimizer_op(**self.optimizer_config)
+                    self.global_step = tf.Variable(0, trainable=False,
+                                                   name='global_step')  # Count how many times the network got updated
 
-            # Configure to load all variables except for the global step variable
+                    self.train_step = self.optimizer.minimize(self.total_loss, global_step=self.global_step)
 
-            variable_to_load = [v for v in tf.global_variables() if 'global_step' not in v.name]
-            self.saver = tf.train.Saver(max_to_keep=10)        # Save the whole session
-            self.saver_best = tf.train.Saver(variable_to_load, max_to_keep=1)      # Save only the variable
-            self.init = tf.global_variables_initializer()
+                    # Configure to load all variables except for the global step variable
+
+                    variable_to_load = [v for v in tf.global_variables() if 'global_step' not in v.name]
+                    self.saver = tf.train.Saver(max_to_keep=10)        # Save the whole session
+                    self.saver_best = tf.train.Saver(variable_to_load, max_to_keep=1)      # Save only the variable
+                    self.init = tf.global_variables_initializer()
 
     def init_session(self):
 
-        self.session = self.session or tf.Session(graph=self.graph)
+        self.session = tf.Session(graph=self.graph, config=tf.ConfigProto(log_device_placement=True, allow_soft_placement=True))
         self.mini_vali_loss = None
 
         with self.graph.as_default():

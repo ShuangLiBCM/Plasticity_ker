@@ -26,7 +26,7 @@ schema = dj.schema('shuang_model_validation_schema', locals())
 class Network(dj.Lookup):
     definition = """
     # Type of network to validate
-    network_id          : smallint # l1 regularization id
+    network_id          : smallint # Network id
     ---
     network_name       : varchar(100) # name of the network
     """
@@ -39,7 +39,7 @@ class Network(dj.Lookup):
 class Dataset(dj.Lookup):
     definition = """
     # Type of spike train data to use for performing model validation
-    dataset_id          : smallint # l1 regularization id
+    dataset_id          : smallint # Dataset id
     ---
     dataset_name      : varchar(100) # name of the dataset
     """
@@ -68,7 +68,7 @@ class L2RegConstant(dj.Lookup):
     definition = """
     # L2 regularization constants for kernel model selection
     # Doesn't apply for model validation
-    l2_id          : smallint # l1 regularization id
+    l2_id          : smallint # l2 regularization id
     ---
     alpha_l2       : float # regularization constant
     """

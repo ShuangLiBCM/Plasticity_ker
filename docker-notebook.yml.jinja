@@ -1,7 +1,8 @@
+# Use one GPU per notebook
 version: '2'
 # launches as many notebooks as GPUs
 services:
-  # Add as many notebooks as GPUs
+# Add as many notebooks as GPUs
   {% for i in range(N_GPU) %}
   gpu_notebook{{i}}:
     build:

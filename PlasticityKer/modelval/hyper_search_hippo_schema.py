@@ -1,5 +1,5 @@
 """
-    Perform hyperparameter search for hippocampal dataset with 3 differen type of data augmentation. Save the network and best parameters to specific folder in /model"
+    Perform hyperparameter search for hippocampal dataset with 3 different type of data augmentation. Save the network and best parameters to specific folder in /model"
 """
 
 import numpy as np
@@ -9,6 +9,7 @@ from modelval import pairptl, network, trainer, dataset
 import datajoint as dj
 from modelval.model_fit_cv import ModelFitCV
 import tempfile
+import pdb
 
 schema = dj.schema('shuang_hyperpara_hippo_schema', locals())
 
@@ -17,7 +18,7 @@ schema = dj.schema('shuang_hyperpara_hippo_schema', locals())
 class Network(dj.Lookup):
     definition = """
     # Type of network to validate
-    network_id          : smallint # l1 regularization id
+    network_id          : smallint # id for type of network
     ---
     network_name       : varchar(100) # name of the network
     """
@@ -31,9 +32,9 @@ class Network(dj.Lookup):
 class Dataset(dj.Lookup):
     definition = """
     # Type of spike train data to use for performing model validation
-    dataset_id          : smallint # l1 regularization id
+    dataset_id          : smallint # id for type of dataset
     ---
-    dataset_name      : varchar(100) # name of the dataset
+    dataset_name        : varchar(100) # name of the dataset
     """
 
     @property
@@ -51,7 +52,7 @@ class Dataaug(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 'Raw data'), (1, 'gp_mean'), (2, 'gp_sample')]
+        return [(0, 'raw_data'), (1, 'gp_mean'), (2, 'gp_samp')]
 
 @schema
 class L1RegConstant(dj.Lookup):
@@ -65,22 +66,21 @@ class L1RegConstant(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 1.0), (0, 5.0), (0, 10.0), (0, 50.0)]
-
+        return [(0, 1.0), (1, 5.0), (2, 10.0), (3, 50.0)]
 
 @schema
 class L2RegConstant(dj.Lookup):
     definition = """
     # L2 regularization constants for kernel model selection
     # Doesn't apply for model validation
-    l2_id          : smallint # l1 regularization id
+    l2_id          : smallint # l2 regularization id
     ---
     alpha_l2       : float # regularization constant
     """
 
     @property
     def contents(self):
-        return [(0, 1.0), (0, 10.0), (0, 50.0), (0, 100.0)]
+        return [(0, 1.0), (1, 10.0), (2, 50.0), (3, 100.0)]
 
 @schema
 class SmoothLp(dj.Lookup):
@@ -94,7 +94,7 @@ class SmoothLp(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 100.0), (0, 200.0), (0, 500.0), (0, 1000.0)]
+        return [(0, 100.0), (1, 200.0), (2, 500.0), (3, 1000.0)]
 
 @schema
 class SmoothHam(dj.Lookup):
@@ -108,7 +108,7 @@ class SmoothHam(dj.Lookup):
 
     @property
     def contents(self):
-        return [(0, 200.0), (0, 500.0), (0, 3000.0), (0, 5000.0)]
+        return [(0, 200.0), (1, 500.0), (2, 3000.0), (3, 5000.0)]
 
 @schema
 class Loops(dj.Lookup):
@@ -152,8 +152,11 @@ class ModelSelection(dj.Computed):
     # model selection for learning rule learner
     -> Network
     -> Dataset
+    -> Dataaug
     -> L1RegConstant
     -> L2RegConstant
+    -> SmoothLp
+    -> SmoothHam
     -> Loops
     -> LearningRate
     -> Seed
@@ -161,10 +164,16 @@ class ModelSelection(dj.Computed):
     pre_kernel        : longblob    # presynaptic kernel
     post_kernel       : longblob    # postsynaptic kernel
     post_post_kernel  : longblob    # postsynaptic kernel for higher order interaction
-    val_error         : float       # mse on validation set
-    val_loss          : float       # total loss on validation set
-    scale             : longblob       # weight for output layer
+    val_error         : longblob    # mse on validation set
+    bias              : longblob    # bias of the output layer
+    scale             : longblob    # weight for output layer
+    fc_w              : longblob    # fully connected weights
     """
+
+    @property
+    def key_source(self):
+        ks = super().key_source
+        return ks & ('l1_id>1') & ('l2_id>1')
 
     def _make_tuples(self, key):
         print('Populating', key, flush=True)
@@ -175,20 +184,23 @@ class ModelSelection(dj.Computed):
 
         # Load the data
 
-        data_type = (Dataset() & key).fetch1['dataset_name']
-        data_aug = (Dataaug() & key).fetch1['dataaug_name']
-        networ_type = (Network() & key).fetch1['network_name']
-        alpha1 = (L1RegConstant() & key).fetch1['alpha_l1']
-        alpha2 = (L2RegConstant() & key).fetch1['alpha_l2']
-        alpha_lp = (SmoothLp() & key).fetch1['alpha_sm_lp']
-        alpha_hm = (SmoothHam() & key).fetch1['alpha_sm_hm']
-        seed = (Seed() & key).fetch1['seed']
+        data_type = (Dataset() & key).fetch1('dataset_name')
+        data_aug = (Dataaug() & key).fetch1('dataaug_name')
+        networ_type = (Network() & key).fetch1('network_name')
+        alpha1 = (L1RegConstant() & key).fetch1('alpha_l1')
+        alpha2 = (L2RegConstant() & key).fetch1('alpha_l2')
+        alpha_lp = (SmoothLp() & key).fetch1('alpha_sm_lp')
+        alpha_hm = (SmoothHam() & key).fetch1('alpha_sm_hm')
+        seed = (Seed() & key).fetch1('seed')
+        np.random.seed(seed)
+        init_seed = tuple(np.random.randint(0, 100, size=5))
 
         save_dir = '/'.join(('/src/Plasticity_Ker/model/', data_type, data_aug, networ_type,
                              str(alpha1), str(alpha2), str(alpha_lp), str(alpha_hm), str(seed)))
 
         vali_err, w_pre, w_post, w_post_post, fc_w, bias, scale = ModelFitCV(data_type=data_type, data_aug=data_aug, test_fold_num=0,
-                              vali_split=5, save_dir_set=save_dir, random_seed=seed, reg_scale=(alpha1, alpha2, alpha_lp, alpha_hm))
+                              vali_split=5, save_dir_set=save_dir, random_seed=seed, reg_scale=(alpha1, alpha2, alpha_lp, alpha_hm),
+                                                                             init_seed=init_seed)
 
         key['val_error'] = vali_err
         key['fc_w'] = fc_w

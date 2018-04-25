@@ -1,5 +1,8 @@
 FROM eywalker/tensorflow-jupyter:v1.0.1-cuda8.0-cudnn5
 
+RUN apt-get update
+RUN apt-get -y install graphviz
+
 RUN pip3 install seaborn
 # RUN pip3 install --upgrade tensorflow
 RUN pip3 install git+https://github.com/datajoint/datajoint-python.git
