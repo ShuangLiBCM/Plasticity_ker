@@ -14,7 +14,7 @@ def ModelFitCV(data_type = 'hippocampus', data_aug='gp_mean', test_fold_num=0, v
     data = pd.read_csv('/src/Plasticity_Ker/data/kernel_training_data_auto.csv')
 
     data_gen_train, data_gen_vali, data_gen_test, y_train, y_vali, y_test = \
-        data_Gen(data_type=data_type, data_aug=data_aug, test_fold_num=test_fold_num, vali_split=vali_split)
+        data_Gen(data, data_type=data_type, data_aug=data_aug, test_fold_num=test_fold_num, vali_split=vali_split)
 
     # Visualize kernel
     vali_err = np.zeros(len(data_gen_train))

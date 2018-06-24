@@ -330,7 +330,7 @@ def data_Gen(data, data_type='hippocampus', data_aug='gp_mean', test_fold_num=0,
                 y_quad_train.append(np.array(data_quad_train1.iloc[train_index]['dw_mean']).reshape(-1, 1))
                 y_quad_vali.append(np.array(data_quad_train1.iloc[vali_index]['dw_mean']).reshape(-1, 1))
 
-            data_trip, y_trip, data_trip_test, y_trip_test = data_aug_gp.triplet_dw_gen(test_fold=test_fold_num,
+            data_trip, y_trip, data_trip_test, y_trip_test = data_aug_gp.triplet_dw_gen(data, test_fold=test_fold_num,
                                                                                         n_samples=1)
             # Split the triplet data into training and validation
             kf_triplet = KFold(n_splits=vali_split, shuffle=True, random_state=456)
